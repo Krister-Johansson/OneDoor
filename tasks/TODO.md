@@ -13,17 +13,14 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T02 Docker Compose for development data services: Postgres 19 with `pgvector`, and Redis 8.8. The api, web and proxy services come in T29.
 - [x] T03 Prisma client. Prisma 7.10.1 pinned exactly, the `prisma-client` generator writing to the git-ignored `src/generated/prisma`, the `database` config namespace, `PrismaModule` with one client on `PrismaPg`, and a Testcontainers database test.
 - [x] T04 Health checks. `HealthModule` with Terminus, `GET /health/live` and `GET /health/ready` (Postgres and Redis), the `redis` config namespace, and a Testcontainers e2e test.
-
-## Foundation
-
-- [ ] T05 Domain errors. The small set of domain errors, one Prisma error mapper, and one global filter registered with `APP_FILTER`. Checkpoint: error handling.
+- [x] T05 Domain errors. Six domain errors with stable codes, `toDomainError()` for Prisma errors, and `DomainErrorFilter` registered with `APP_FILTER` (HTTP only; GraphQL comes with T07).
 
 ## Connections
 
 Needs spec: `specs/connections.md`.
 
 - [ ] T06 Connection model. Prisma model for an upstream connection (name, URL, auth mode, connection mode, enabled) and a migration created with `--create-only`. Checkpoint: first Prisma model and migration. Human review: migration.
-- [ ] T07 GraphQL setup and the `connections` query. Code-first with the Apollo driver, `server/schema.gql` emitted and committed, and a schema drift check in server `verify`. Adds `connection.model.ts` and `connection.resolver.ts`. Checkpoint: first GraphQL model and resolver.
+- [ ] T07 GraphQL setup and the `connections` query. Code-first with the Apollo driver, `server/schema.gql` emitted and committed, and a schema drift check in server `verify`. Adds `connection.model.ts` and `connection.resolver.ts`, and the GraphQL branch of `DomainErrorFilter` (domain errors as GraphQL errors with `extensions.code`). Checkpoint: first GraphQL model and resolver.
 - [ ] T08 Secret storage. `SecretStore` abstract class, AES-256-GCM implementation, key and key id from config, bound with a factory provider. Checkpoint: first interface with implementation and provider binding. Human review: encryption and key handling.
 - [ ] T09 Create, update and delete connections. `connection.input.ts` validated with `class-validator`. Secrets are encrypted with `SecretStore`, and GraphQL returns only whether a secret is set. Checkpoint: first GraphQL input and mutation. Human review: credential storage.
 - [ ] T10 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql`, a `codegen` script, and a codegen drift check in web `verify`. Checkpoint: codegen setup.
