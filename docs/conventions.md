@@ -151,3 +151,75 @@ Redis runs with `--maxmemory-policy noeviction --appendonly yes`, which BullMQ r
 Postgres extensions (`vector`, `pg_trgm`) are not created by Compose. Migration SQL creates them.
 
 Start the services with `docker compose up -d --wait` and stop them with `docker compose down`. Use `docker compose down -v` only when you mean to delete the data.
+
+## Prisma client and Nest modules
+
+Approved 2026-11-21.
+
+### Prisma
+
+- `prisma`, `@prisma/client` and `@prisma/adapter-pg` are pinned exactly to the same 7.x version. npm `latest` points at Prisma 8, so always name the version: `pnpm add --save-exact @prisma/client@7.10.1`.
+- `server/prisma/schema.prisma` and `server/prisma7.config.ts` came from `prisma init`. The config loads `server/.env` with `dotenv/config`, because the Prisma 7 CLI does not read `.env` itself.
+- The `prisma-client` generator writes to `server/src/generated/prisma`. Git ignores that folder, so Biome does not lint it. Import the client from `../generated/prisma/client.js`.
+- `postinstall` runs `prisma generate`. `migrate dev` does not regenerate the client in Prisma 7, so run `pnpm prisma generate` after every schema change.
+- `server/pnpm-workspace.yaml` holds pnpm settings only. Its `allowBuilds` lets `@prisma/engines` and `prisma` run their install scripts and denies the rest.
+
+### PrismaService
+
+`PrismaService` is the one Prisma client. It extends `PrismaClient`, takes its URL from the `database` config namespace, and uses the `PrismaPg` adapter:
+
+```ts
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleDestroy {
+  constructor(
+    @Inject(databaseConfig.KEY) database: ConfigType<typeof databaseConfig>,
+  ) {
+    super({ adapter: new PrismaPg({ connectionString: database.url }) });
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.$disconnect();
+  }
+}
+```
+
+It does not call `$connect()` at startup. The first query opens the pool, so the server starts while Postgres is down. `main.ts` calls `app.enableShutdownHooks()`, so `onModuleDestroy` runs on SIGTERM.
+
+Feature modules import `PrismaModule` and inject `PrismaService`. Never construct another `PrismaClient`.
+
+### Nest modules
+
+Generate a module and its service with the Nest CLI, then edit only what the task needs:
+
+```bash
+pnpm exec nest g module prisma
+pnpm exec nest g service prisma
+```
+
+The CLI adds the module to `AppModule`. A module lists its providers and exports only what other modules inject. Modules are not `@Global()`; `ConfigModule` is the one global module.
+
+### Database tests
+
+A database test starts its own Postgres with Testcontainers, using the same image tag as `docker-compose.yml`. It never uses the Compose database. It sits next to the code as `<name>.spec.ts`, so `pnpm test` needs Docker running.
+
+```ts
+beforeAll(async () => {
+  container = await new PostgreSqlContainer(POSTGRES_IMAGE).start();
+  vi.stubEnv('DATABASE_URL', container.getConnectionUri());
+  moduleRef = await Test.createTestingModule({
+    imports: [
+      ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [databaseConfig] }),
+      PrismaModule,
+    ],
+  }).compile();
+  prisma = moduleRef.get(PrismaService);
+}, 120_000);
+
+afterAll(async () => {
+  await moduleRef?.close();
+  await container?.stop();
+  vi.unstubAllEnvs();
+});
+```
+
+`ignoreEnvFile: true` keeps `server/.env` out of the test. Give `beforeAll` a timeout of 120 seconds, because the first run pulls the image.
