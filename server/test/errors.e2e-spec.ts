@@ -4,9 +4,11 @@ import {
   Get,
   type INestApplication,
 } from '@nestjs/common';
+import { Query, Resolver } from '@nestjs/graphql';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
+import { CallerService } from '../src/caller/caller.service.js';
 import {
   ConflictError,
   ForbiddenError,
@@ -59,6 +61,19 @@ class ThrowingController {
   }
 }
 
+@Resolver()
+class ThrowingResolver {
+  @Query(() => String)
+  throwConflict(): string {
+    throw new ConflictError('Connection already exists');
+  }
+
+  @Query(() => String)
+  throwUnknown(): string {
+    throw new Error('detail-in-message');
+  }
+}
+
 describe('DomainErrorFilter (e2e)', () => {
   let app: INestApplication<App>;
 
@@ -72,7 +87,12 @@ describe('DomainErrorFilter (e2e)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
       controllers: [ThrowingController],
-    }).compile();
+      providers: [ThrowingResolver],
+    })
+      // GraphQL requests need a caller, and this test has no database.
+      .overrideProvider(CallerService)
+      .useValue({ getDefaultCaller: async () => ({ userId: 'test' }) })
+      .compile();
     app = moduleRef.createNestApplication();
     await app.init();
   });
@@ -129,5 +149,33 @@ describe('DomainErrorFilter (e2e)', () => {
       .get('/no-such-route')
       .expect(404);
     expect(res.body.statusCode).toBe(404);
+  });
+
+  it('answers a domain error over GraphQL with extensions.code', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/graphql')
+      .send({ query: '{ throwConflict }' })
+      .expect(200);
+    expect(res.body.errors).toEqual([
+      expect.objectContaining({
+        message: 'Connection already exists',
+        extensions: { code: 'CONFLICT' },
+      }),
+    ]);
+  });
+
+  it('answers an unknown error over GraphQL as INTERNAL without its message or stack', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/graphql')
+      .send({ query: '{ throwUnknown }' })
+      .expect(200);
+    expect(res.body.errors).toEqual([
+      expect.objectContaining({
+        message: 'Internal server error',
+        extensions: { code: 'INTERNAL' },
+      }),
+    ]);
+    expect(res.text).not.toContain('detail-in-message');
+    expect(res.text).not.toContain('stacktrace');
   });
 });

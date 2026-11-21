@@ -1,7 +1,8 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { DEFAULT_USER_NAME, seed } from '../../prisma/seed.js';
+import { seed } from '../../prisma/seed.js';
 import { startMigratedPostgres } from '../../test/support/database.js';
+import { DEFAULT_USER_NAME } from '../caller/caller.js';
 import { ConflictError } from '../errors/domain-errors.js';
 import { PrismaClient } from '../generated/prisma/client.js';
 import { toDomainError } from './prisma-error.mapper.js';
