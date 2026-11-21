@@ -20,12 +20,18 @@ importers:
       '@nestjs/platform-express':
         specifier: ^12.6.0
         version: 12.6.0(@nestjs/common@12.6.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.6.0)(rxjs@7.8.2)(supports-color@7.2.0)
+      '@nestjs/terminus':
+        specifier: ^12.2.0
+        version: 12.2.0(@grpc/grpc-js@1.14.7)(@grpc/proto-loader@0.8.1)(@nestjs/common@12.6.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.6.0)(@prisma/client@7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3))(typescript@6.0.3))(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@prisma/adapter-pg':
         specifier: 7.10.1
         version: 7.10.1
       '@prisma/client':
         specifier: 7.10.1
         version: 7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3))(typescript@6.0.3)
+      ioredis:
+        specifier: ^6.0.0
+        version: 6.0.0(supports-color@7.2.0)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -49,6 +55,9 @@ importers:
         specifier: ^12.6.0
         version: 12.6.0(@nestjs/common@12.6.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.6.0)(@nestjs/platform-express@12.6.0)
       '@testcontainers/postgresql':
+        specifier: ^12.2.2
+        version: 12.2.2(bare-buffer@3.7.3)(supports-color@7.2.0)
+      '@testcontainers/redis':
         specifier: ^12.2.2
         version: 12.2.2(bare-buffer@3.7.3)(supports-color@7.2.0)
       '@types/express':
@@ -385,6 +394,9 @@ packages:
       '@types/node':
         optional: true
 
+  '@ioredis/commands@2.0.0':
+    resolution: {integrity: sha512-vrx0AE/T0h7cRZwfo1M39Cr+ZhZrkf0V8mQN75wucKCxCLD9l/VX6no3gFvrLqD1IlG/1LtzWovqEw3t0Vr9zg==}
+
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
@@ -502,6 +514,58 @@ packages:
       typescript: ^6.0.0
     peerDependenciesMeta:
       prettier:
+        optional: true
+
+  '@nestjs/terminus@12.2.0':
+    resolution: {integrity: sha512-2ssbjf3rCZVVogAVzxOWnBAF5k2KxKHw4fabLfrLy8SiA0QTaG0YEgcdamzbSVSucnnMDF0QCbpYv0bEkxmwtw==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
+    peerDependencies:
+      '@grpc/grpc-js': '*'
+      '@grpc/proto-loader': '*'
+      '@mikro-orm/core': '*'
+      '@mikro-orm/nestjs': '*'
+      '@nestjs/axios': ^4.0.0 || ^12.0.0
+      '@nestjs/common': ^11.0.0 || ^12.0.0
+      '@nestjs/core': ^11.0.0 || ^12.0.0
+      '@nestjs/microservices': ^11.0.0 || ^12.0.0
+      '@nestjs/mongoose': ^11.0.0 || ^12.0.0
+      '@nestjs/sequelize': ^11.0.0 || ^12.0.0
+      '@nestjs/swagger': ^11.0.0 || ^12.0.0
+      '@nestjs/typeorm': ^11.0.0 || ^12.0.0
+      '@prisma/client': '*'
+      mongoose: '*'
+      reflect-metadata: ^0.1.12 || ^0.2.0
+      rxjs: ^7.1.0
+      sequelize: '*'
+      typeorm: '*'
+    peerDependenciesMeta:
+      '@grpc/grpc-js':
+        optional: true
+      '@grpc/proto-loader':
+        optional: true
+      '@mikro-orm/core':
+        optional: true
+      '@mikro-orm/nestjs':
+        optional: true
+      '@nestjs/axios':
+        optional: true
+      '@nestjs/microservices':
+        optional: true
+      '@nestjs/mongoose':
+        optional: true
+      '@nestjs/sequelize':
+        optional: true
+      '@nestjs/swagger':
+        optional: true
+      '@nestjs/typeorm':
+        optional: true
+      '@prisma/client':
+        optional: true
+      mongoose:
+        optional: true
+      sequelize:
+        optional: true
+      typeorm:
         optional: true
 
   '@nestjs/testing@12.6.0':
@@ -808,6 +872,9 @@ packages:
 
   '@testcontainers/postgresql@12.2.2':
     resolution: {integrity: sha512-ePhFeUswU6aHJ1HETznfnVKuR0KYtGkMfqE1DTltgSt21WokXFby/I+c7g/fPXSE9sfxfE+GtyoUeohejpVcSA==}
+
+  '@testcontainers/redis@12.2.2':
+    resolution: {integrity: sha512-Qf4l5sVKo7sxOBMfQYjLYMSIgsZU6Ia0jYsuH9jFoLJhJXInZoALjBjkCicFaHUvmqvm3RCdv0Cd9sntrAH14w==}
 
   '@tokenizer/inflate@0.6.1':
     resolution: {integrity: sha512-EuqSyHdOXN61cc5/rsW6uUn1TJZJGZr56jlkUbsLwVJ6uHgvwQyFkYfOCf+zzPFAYjftPk1WeJnEhpLVvzbm1A==}
@@ -1239,6 +1306,10 @@ packages:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
 
+  cluster-key-slot@1.1.1:
+    resolution: {integrity: sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw==}
+    engines: {node: '>=0.10.0'}
+
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
     engines: {node: '>=7.0.0'}
@@ -1391,6 +1462,10 @@ packages:
   delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
+
+  denque@2.1.0:
+    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
+    engines: {node: '>=0.10'}
 
   depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
@@ -1703,6 +1778,10 @@ packages:
   internmap@2.0.3:
     resolution: {integrity: sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg==}
     engines: {node: '>=12'}
+
+  ioredis@6.0.0:
+    resolution: {integrity: sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==}
+    engines: {node: '>=20.0.0'}
 
   ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
@@ -2198,6 +2277,10 @@ packages:
     resolution: {integrity: sha512-Kko+Y5XQ6fM+Ce3dq3m9YGxnacYZYl9cA1wZjaF3Vbry2L3i1qVg8+CAgNPsXRArPMUMCaOR7oa9Nqntc43JKA==}
     engines: {node: '>= 20.19.0'}
 
+  redis-errors@1.2.0:
+    resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
+    engines: {node: '>=4'}
+
   reflect-metadata@0.2.2:
     resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
 
@@ -2330,6 +2413,9 @@ packages:
   ssh2@1.17.0:
     resolution: {integrity: sha512-wPldCk3asibAjQ/kziWQQt1Wh3PgDFpC0XpwclzKcdT1vql6KeYxf5LIt4nlFkUeR8WuphYMKqUA56X4rjbfgQ==}
     engines: {node: '>=10.16.0'}
+
+  standard-as-callback@2.1.0:
+    resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
 
   statuses@2.0.2:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
@@ -2932,6 +3018,8 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.6.6
 
+  '@ioredis/commands@2.0.0': {}
+
   '@isaacs/cliui@8.0.2':
     dependencies:
       string-width: 5.1.2
@@ -3048,6 +3136,17 @@ snapshots:
       typescript: 6.0.3
     transitivePeerDependencies:
       - chokidar
+
+  '@nestjs/terminus@12.2.0(@grpc/grpc-js@1.14.7)(@grpc/proto-loader@0.8.1)(@nestjs/common@12.6.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.6.0)(@prisma/client@7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3))(typescript@6.0.3))(reflect-metadata@0.2.2)(rxjs@7.8.2)':
+    dependencies:
+      '@nestjs/common': 12.6.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0)
+      '@nestjs/core': 12.6.0(@nestjs/common@12.6.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/platform-express@12.6.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      reflect-metadata: 0.2.2
+      rxjs: 7.8.2
+    optionalDependencies:
+      '@grpc/grpc-js': 1.14.7
+      '@grpc/proto-loader': 0.8.1
+      '@prisma/client': 7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(magicast@0.5.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3))(typescript@6.0.3)
 
   '@nestjs/testing@12.6.0(@nestjs/common@12.6.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.6.0)(@nestjs/platform-express@12.6.0)':
     dependencies:
@@ -3307,6 +3406,15 @@ snapshots:
   '@standard-schema/spec@1.1.0': {}
 
   '@testcontainers/postgresql@12.2.2(bare-buffer@3.7.3)(supports-color@7.2.0)':
+    dependencies:
+      testcontainers: 12.2.2(bare-buffer@3.7.3)(supports-color@7.2.0)
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - react-native-b4a
+      - supports-color
+
+  '@testcontainers/redis@12.2.2(bare-buffer@3.7.3)(supports-color@7.2.0)':
     dependencies:
       testcontainers: 12.2.2(bare-buffer@3.7.3)(supports-color@7.2.0)
     transitivePeerDependencies:
@@ -3816,6 +3924,8 @@ snapshots:
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
 
+  cluster-key-slot@1.1.1: {}
+
   color-convert@2.0.1:
     dependencies:
       color-name: 1.1.4
@@ -3948,6 +4058,8 @@ snapshots:
       robust-predicates: 3.0.3
 
   delayed-stream@1.0.0: {}
+
+  denque@2.1.0: {}
 
   depd@2.0.0: {}
 
@@ -4272,6 +4384,17 @@ snapshots:
   inherits@2.0.4: {}
 
   internmap@2.0.3: {}
+
+  ioredis@6.0.0(supports-color@7.2.0):
+    dependencies:
+      '@ioredis/commands': 2.0.0
+      cluster-key-slot: 1.1.1
+      debug: 4.4.3(supports-color@7.2.0)
+      denque: 2.1.0
+      redis-errors: 1.2.0
+      standard-as-callback: 2.1.0
+    transitivePeerDependencies:
+      - supports-color
 
   ipaddr.js@1.9.1: {}
 
@@ -4715,6 +4838,8 @@ snapshots:
 
   readdirp@5.1.1: {}
 
+  redis-errors@1.2.0: {}
+
   reflect-metadata@0.2.2: {}
 
   remeda@2.33.4: {}
@@ -4875,6 +5000,8 @@ snapshots:
     optionalDependencies:
       cpu-features: 0.0.10
       nan: 2.30.0
+
+  standard-as-callback@2.1.0: {}
 
   statuses@2.0.2: {}
 
