@@ -223,3 +223,68 @@ afterAll(async () => {
 ```
 
 `ignoreEnvFile: true` keeps `server/.env` out of the test. Give `beforeAll` a timeout of 120 seconds, because the first run pulls the image.
+
+## HTTP controllers and health checks
+
+Approved 2026-11-21.
+
+### HTTP controllers
+
+Plain HTTP routes are few: health checks, the OAuth callback and icons. GraphQL serves everything else. Generate the module and controller with the Nest CLI, and a helper provider with `nest g provider <module>/<name> --flat --no-spec`:
+
+```bash
+pnpm exec nest g module health
+pnpm exec nest g controller health
+pnpm exec nest g provider health/redis.health --flat --no-spec
+```
+
+A controller has one `@Controller('<area>')` prefix and methods that only delegate. Delete the controller spec that `nest g controller` writes; an e2e test covers the routes.
+
+### Health checks
+
+`HealthModule` uses `@nestjs/terminus`:
+
+- `GET /health/live` runs `health.check([])`. It checks no dependencies, so an outage does not get the process restarted.
+- `GET /health/ready` checks every hard dependency and answers 503 when one is down. Postgres uses Terminus's `PrismaHealthIndicator` with `PrismaService`. Redis uses `RedisHealthIndicator`.
+- Every check has a timeout of 1 second.
+
+A custom indicator uses `HealthIndicatorService`:
+
+```ts
+isHealthy<Key extends string>(key: Key) {
+  return this.healthIndicatorService
+    .check(key)
+    .attempt(async () => {
+      await this.client.ping();
+    })
+    .withTimeout(1000);
+}
+```
+
+`RedisHealthIndicator` owns one ioredis client with `maxRetriesPerRequest: 1`, logs the first connection error per outage, and calls `disconnect()` in `onModuleDestroy`.
+
+### Config with a non-secret default
+
+A variable with no secret in its default value gets a `.default()` and the same value in `.env.example`, like `REDIS_URL=redis://127.0.0.1:6379`. The schema restricts the URL scheme, for example `z.url({ protocol: /^rediss?$/ })`.
+
+### End-to-end tests
+
+An e2e test lives in `server/test/<area>.e2e-spec.ts`. It starts the services it needs with Testcontainers, using the image tags from `docker-compose.yml`. It stubs their URLs, then imports `AppModule` dynamically, so config validation sees the containers and not `server/.env`:
+
+```ts
+beforeAll(async () => {
+  [postgres, redis] = await Promise.all([
+    new PostgreSqlContainer(POSTGRES_IMAGE).withPassword(password).start(),
+    new RedisContainer(REDIS_IMAGE).start(),
+  ]);
+  vi.stubEnv('DATABASE_URL', postgres.getConnectionUri());
+  vi.stubEnv('REDIS_URL', redis.getConnectionUrl());
+
+  const { AppModule } = await import('../src/app.module.js');
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  app = moduleRef.createNestApplication();
+  await app.init();
+}, 120_000);
+```
+
+Call routes with `supertest` on `app.getHttpServer()`. Close the app before stopping the containers. A test that touches credentials starts Postgres with a random password and asserts that the response does not contain it.
