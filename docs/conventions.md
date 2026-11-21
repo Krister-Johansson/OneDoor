@@ -340,3 +340,55 @@ Catch a unique violation instead of checking for a duplicate first.
 It handles only HTTP. The GraphQL mapping to `extensions.code` comes with the GraphQL API. MCP tool errors do not use the filter; they are returned as results with `isError: true`.
 
 An e2e test for an error path boots `AppModule` with a test-only controller, so it goes through the real filter registration (see `server/test/errors.e2e-spec.ts`).
+
+## Prisma models, migrations and seed
+
+Approved 2026-11-22.
+
+### Models
+
+- Models are PascalCase and fields camelCase. Tables and columns are snake_case in the database, mapped with `@@map` and `@map`. Enums are mapped too: `@@map("auth_type")`.
+- Ids are `String @id @default(uuid(7)) @db.Uuid`.
+- Timestamps are `@db.Timestamptz(3)`: `createdAt` with `@default(now())`, `updatedAt` with `@updatedAt`.
+- Text that is unique regardless of case is `@db.Citext`, with the extension created in the migration.
+- Every owned model has `ownerId` pointing to `User`, and each `@@unique` that should hold per user starts with `ownerId`.
+- Give each model and each non-obvious field a `///` comment that names the requirement it serves.
+
+```prisma
+model Connection {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  ownerId     String  @map("owner_id") @db.Uuid
+  owner       User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  /// Unique per owner, ignoring case (citext).
+  displayName String? @map("display_name") @db.Citext
+
+  @@unique([ownerId, displayName])
+  @@map("connection")
+}
+```
+
+### Migrations
+
+1. Change `prisma/schema.prisma`.
+2. Run `pnpm prisma migrate dev --create-only --name <name>`, with the name in snake_case.
+3. Add by hand what Prisma 7 cannot express: extensions, check constraints, and later the vector and full-text columns. Put a comment above each addition that says why and names the requirement.
+4. Apply it locally with `pnpm prisma migrate dev`. Then run `pnpm prisma migrate dev --create-only --name drift_probe`. It must create an empty migration, which you delete. A non-empty one means Prisma would undo a hand-written addition.
+5. Run `pnpm prisma generate`.
+6. Flag the migration for human review in the PR.
+
+Name a check constraint `<table>_<rule>_check`. Never edit a migration after it is merged; write a new one.
+
+### Seed
+
+`prisma/seed.ts` creates the rows every environment needs, with `upsert` so it can run any number of times. It exports `seed(prisma)` for tests and runs itself only under `import.meta.main`. Run it with `pnpm prisma db seed`.
+
+### Database tests against the migrations
+
+A test that needs the real schema starts its database with `startMigratedPostgres()` from `server/test/support/database.ts`, which runs `prisma migrate deploy` on a Testcontainers Postgres. Call `seed(prisma)` when the test needs the seeded rows.
+
+Assert a rejected check constraint by its name, and a Prisma error by the domain error `toDomainError` makes of it:
+
+```ts
+await expect(create()).rejects.toThrow(/connection_catalog_or_custom_check/);
+expect(toDomainError(error, 'Connection')).toBeInstanceOf(ConflictError);
+```
