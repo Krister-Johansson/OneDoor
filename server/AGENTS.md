@@ -72,7 +72,7 @@ abstract class only.
 
 Rules:
 
-- `SearchFilter` (caller team, optional server ids) is a required argument of every
+- `SearchFilter` (the caller and optional connection ids) is a required argument of every
   `Retriever.search`. Permission filtering happens inside each retriever, never after.
 - Every implementation has an `id` or `version`. Log which ones answered each search.
 - Code asks `LlmClient` and `Embedder` for a **role** (for example `example-generation`),
@@ -94,8 +94,9 @@ Rules:
 - Failures the model can act on (unknown tool, invalid arguments, policy denied, upstream
   error) are **returned** as a result with `isError: true` and a useful message. Do not
   throw them. Do not retry a call automatically after a dropped connection.
-- A guard is attached to the endpoint. Today it allows every request and attaches a default
-  caller and team. Tools read the caller from the request context, never assume "no auth".
+- A guard is attached to the endpoint. Today it allows every request and attaches the
+  seeded user `me` as the caller. Tools read the caller from the request context, never
+  assume "no auth".
 - Tool providers and everything they call are default-scoped (no request scope).
 
 ## Search
@@ -127,12 +128,10 @@ Rules:
   findable by keyword.
 - Tool policy: each tool is enabled or disabled and has a class of `read`, `write` or
   `destructive`. Pre-fill the class from the tool's MCP annotations, which are untrusted
-  hints; the admin can override. Each connection has a mode: read-only, all, or custom.
+  hints; the owner can override. Each connection has a mode: read-only, all, or custom.
   `search` hides tools the policy forbids and `execute` rejects them. The `execute` check
   is the one that counts.
-- Server icons: use the server's own `icons` if provided, then a favicon, then a
-  generated fallback. Fetch only from validated hosts, cap size, verify it is an image,
-  store the bytes, and serve them from our own origin.
+- Server icons: see REQ-CONN-070 and REQ-CONN-071 in `specs/connections.md`.
 
 ## Secrets
 
@@ -150,7 +149,7 @@ Rules:
 - The schema is emitted to `server/schema.gql` and committed. If your change alters it,
   commit the new file; `verify` fails when the emitted schema differs from the committed one.
 - Subscriptions publish through `EventBus`. Send ids in events and load the row in the resolver.
-- GraphQL serves the admin UI only. Agents use `/mcp`.
+- GraphQL serves the web UI only. Agents use `/mcp`.
 
 ## Errors
 
