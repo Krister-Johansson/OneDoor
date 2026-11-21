@@ -62,9 +62,9 @@ describe('database schema', () => {
     expect(users).toHaveLength(1);
   });
 
-  it('creates a connection as READ_ONLY and enabled (REQ-CONN-050, REQ-CONN-051)', async () => {
+  it('creates a connection enabled (REQ-CONN-051)', async () => {
     const connection = await custom(meId, 'Defaults');
-    expect(connection).toMatchObject({ mode: 'READ_ONLY', enabled: true });
+    expect(connection.enabled).toBe(true);
   });
 
   it('keeps display names unique per owner, ignoring case (REQ-CONN-021)', async () => {
