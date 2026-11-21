@@ -1,0 +1,47 @@
+"""How OneDoor authenticates to an MCP server (REQ-CONN-040)."""
+enum AuthType {
+  API_KEY
+  NONE
+  OAUTH_DCR
+  OAUTH_MANUAL
+}
+
+"""
+A user's link to one MCP server. A catalog-based connection shows its catalog entry's name, description, URL, auth type and header settings.
+"""
+type Connection {
+  authType: AuthType!
+
+  """Set when the connection is based on a catalog entry."""
+  catalogEntryId: ID
+  createdAt: DateTime!
+  description: String!
+
+  """The server name agents see (REQ-CONN-021)."""
+  displayName: String!
+
+  """Whether the gateway uses it (REQ-CONN-051)."""
+  enabled: Boolean!
+
+  """The header that carries the API key. Only for API_KEY."""
+  headerName: String
+
+  """Text before the API key in the header. Only for API_KEY."""
+  headerPrefix: String
+  id: ID!
+  updatedAt: DateTime!
+  url: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Query {
+  """One of the caller's connections. NOT_FOUND otherwise."""
+  connection(id: ID!): Connection!
+
+  """The caller's connections, sorted by display name."""
+  connections: [Connection!]!
+}
