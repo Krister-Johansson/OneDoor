@@ -126,11 +126,10 @@ Rules:
 - On install or tool-list change: queue a job that diffs tools by content hash, generates
   example queries, embeds, and updates the index. A tool with a pending embedding stays
   findable by keyword.
-- Tool policy: each tool is enabled or disabled and has a class of `read`, `write` or
-  `destructive`. Pre-fill the class from the tool's MCP annotations, which are untrusted
-  hints; the owner can override. Each connection has a mode: read-only, all, or custom.
-  `search` hides tools the policy forbids and `execute` rejects them. The `execute` check
-  is the one that counts.
+- Tool policy: the owner enables or disables each tool, and a new tool is enabled. There
+  is no connection mode and no tool class. MCP tool annotations (read-only, destructive)
+  are untrusted hints: show them as labels, never enforce them. `search` hides disabled
+  tools and `execute` rejects them. The `execute` check is the one that counts.
 - Server icons: see REQ-CONN-070 and REQ-CONN-071 in `specs/connections.md`.
 
 ## Secrets

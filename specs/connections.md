@@ -5,7 +5,7 @@ A connection is one user's link to one remote MCP server: its URL, how OneDoor a
 This spec covers the catalog of pre-installed servers, custom servers, credentials, the check before use, and icons. These belong to other specs:
 
 - The OAuth flows (dynamic client registration, authorization, callback, token refresh): `specs/upstreams.md`.
-- The upstream client, live status, tool sync and the per-tool policy: `specs/upstreams.md`.
+- The upstream client, live status, tool sync and each tool's enabled flag: `specs/upstreams.md`.
 - Search and execute: `specs/search.md` and `specs/mcp-endpoint.md`.
 
 ## Terms
@@ -65,7 +65,7 @@ Switching on an entry creates a connection for the caller that references the en
 
 A caller has at most one connection per catalog entry. Switching on an entry the caller already has a connection for enables that connection.
 
-- WHEN `me` switches on Context7 for the first time THEN a connection exists that references the Context7 entry, with mode `READ_ONLY` and enabled.
+- WHEN `me` switches on Context7 for the first time THEN a connection exists that references the Context7 entry and is enabled.
 - WHEN `me` switches on Context7 again after switching it off THEN the existing connection is enabled and no second connection is created.
 - WHEN `me` already has a custom connection with the entry's display name THEN switching on the entry answers `CONFLICT`, and the message says to rename the custom connection.
 
@@ -82,9 +82,9 @@ A user adds a custom server with:
 - for `API_KEY`: the API key, the header name (default `Authorization`) and the header prefix (default `Bearer`, may be empty),
 - for `OAUTH_MANUAL`: the OAuth client id and client secret.
 
-A new custom connection has mode `READ_ONLY` and is enabled.
+A new custom connection is enabled.
 
-- WHEN `me` adds "Acme MCP" at `https://mcp.example.com/mcp` with auth type `NONE` THEN a connection exists with that name and URL, mode `READ_ONLY`, enabled and `READY`.
+- WHEN `me` adds "Acme MCP" at `https://mcp.example.com/mcp` with auth type `NONE` THEN a connection exists with that name and URL, enabled and `READY`.
 
 ### REQ-CONN-021 Display name
 
@@ -168,13 +168,9 @@ A connection is `NEEDS_CREDENTIALS` until its auth type's credentials are comple
 - WHEN `me` switches on an `API_KEY` catalog entry THEN the connection is `NEEDS_CREDENTIALS`.
 - WHEN `me` then saves an API key THEN the connection is `READY`.
 
-## Mode, enabled and removal
+## Enabled and removal
 
-### REQ-CONN-050 Connection mode
-
-A connection has a mode: `READ_ONLY`, `ALL` or `CUSTOM`. A new connection is `READ_ONLY`. What each mode allows per tool is defined in `specs/upstreams.md`.
-
-- WHEN `me` adds a connection without a mode THEN its mode is `READ_ONLY`.
+A connection has no mode such as read-only. OneDoor cannot know what a tool does: MCP tool annotations are optional, and they are hints that a server may get wrong. The owner enables or disables each tool instead, as `specs/upstreams.md` describes.
 
 ### REQ-CONN-051 Enabled
 
@@ -295,7 +291,7 @@ Errors use the domain error codes: a duplicate display name is `CONFLICT`; an in
 The servers screen has two sections:
 
 - Catalog: one card per entry with its icon, name and description, a switch, and "Needs credentials" when the caller's connection is `NEEDS_CREDENTIALS`.
-- My servers: the caller's custom connections, sorted by display name, each with its icon, name, URL, auth type, mode and enabled state, and links to edit and remove.
+- My servers: the caller's custom connections, sorted by display name, each with its icon, name, URL, auth type and enabled state, and links to edit and remove.
 
 - WHEN `me` has no custom connections THEN "My servers" shows an empty state with the "Add server" action.
 
