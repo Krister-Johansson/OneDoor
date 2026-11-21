@@ -9,3 +9,86 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Tables and columns use snake_case in the database, mapped with @@map and @map.
+
+/// A person who owns connections. The proof of concept has one user, `me`,
+/// created by the seed (specs/connections.md, REQ-CONN-001).
+model User {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  name        String       @unique
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  connections Connection[]
+
+  @@map("user")
+}
+
+/// How OneDoor authenticates to an MCP server (REQ-CONN-040).
+enum AuthType {
+  NONE
+  API_KEY
+  OAUTH_DCR
+  OAUTH_MANUAL
+
+  @@map("auth_type")
+}
+
+/// Which tools of a connection the gateway may use (REQ-CONN-050).
+enum ConnectionMode {
+  READ_ONLY
+  ALL
+  CUSTOM
+
+  @@map("connection_mode")
+}
+
+/// A pre-installed server that any user can switch on (REQ-CONN-010).
+/// OAuth client details for OAUTH_MANUAL entries come from server config.
+model CatalogEntry {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  /// Stable identifier for seeds and config, such as `github`.
+  key          String       @unique
+  displayName  String       @unique @map("display_name") @db.Citext
+  description  String       @default("")
+  url          String
+  authType     AuthType     @map("auth_type")
+  /// Only for API_KEY.
+  headerName   String?      @map("header_name")
+  /// Only for API_KEY. May be empty.
+  headerPrefix String?      @map("header_prefix")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  connections  Connection[]
+
+  @@map("catalog_entry")
+}
+
+/// A user's link to one MCP server: either based on a catalog entry, or a
+/// custom server. A catalog-based connection takes its display name,
+/// description, URL, auth type and header settings from the entry, so those
+/// columns are null on it; a check constraint in the migration enforces this.
+model Connection {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  ownerId        String         @map("owner_id") @db.Uuid
+  owner          User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  catalogEntryId String?        @map("catalog_entry_id") @db.Uuid
+  catalogEntry   CatalogEntry?  @relation(fields: [catalogEntryId], references: [id], onDelete: Restrict)
+  /// Unique per owner, ignoring case (citext). Null on catalog-based connections.
+  displayName    String?        @map("display_name") @db.Citext
+  description    String?
+  url            String?
+  authType       AuthType?      @map("auth_type")
+  /// Only for API_KEY.
+  headerName     String?        @map("header_name")
+  /// Only for API_KEY. May be empty.
+  headerPrefix   String?        @map("header_prefix")
+  mode           ConnectionMode @default(READ_ONLY)
+  enabled        Boolean        @default(true)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([ownerId, displayName])
+  @@unique([ownerId, catalogEntryId])
+  @@index([catalogEntryId])
+  @@map("connection")
+}
