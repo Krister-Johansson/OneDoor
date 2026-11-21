@@ -337,7 +337,7 @@ Catch a unique violation instead of checking for a duplicate first.
 - An `HttpException` passes through unchanged. Validation pipes, guards, Terminus and Nest's unknown-route 404 throw these.
 - Anything else is logged with its stack and answered as `INTERNAL` with the message "Internal server error".
 
-It handles only HTTP. The GraphQL mapping to `extensions.code` comes with the GraphQL API. MCP tool errors do not use the filter; they are returned as results with `isError: true`.
+For GraphQL, see the GraphQL section. MCP tool errors do not use the filter; they are returned as results with `isError: true`.
 
 An e2e test for an error path boots `AppModule` with a test-only controller, so it goes through the real filter registration (see `server/test/errors.e2e-spec.ts`).
 
@@ -392,3 +392,56 @@ Assert a rejected check constraint by its name, and a Prisma error by the domain
 await expect(create()).rejects.toThrow(/connection_catalog_or_custom_check/);
 expect(toDomainError(error, 'Connection')).toBeInstanceOf(ConflictError);
 ```
+
+## GraphQL
+
+Approved 2026-11-22.
+
+### Setup
+
+`GraphqlApiModule` configures code-first GraphQL on Apollo at `/graphql`. The schema is built in memory (`autoSchemaFile: true`), sorted, and stack traces never reach clients. The context is a function, `({ req }) => ({ req })`, so each request has its own caller.
+
+### The committed schema
+
+`server/schema.gql` is the contract with `web`. `test/schema.e2e-spec.ts` builds the schema from the real `AppModule` and compares it with the file, so `pnpm test:e2e`, and with it `pnpm verify`, fails on drift. After any schema change, run `pnpm generate-schema` and commit `schema.gql`.
+
+In tests, load `graphql` with `createRequire(import.meta.url)('graphql')` when the code reads a schema or values that Nest built. A plain `import` gives Vitest a second copy of `graphql`.
+
+### Files per feature
+
+A feature's GraphQL files sit in its module folder, generated with the Nest CLI and then filled in:
+
+```bash
+pnpm exec nest g class upstreams/connection.model --flat --no-spec
+pnpm exec nest g service upstreams/connections --flat --no-spec
+pnpm exec nest g resolver upstreams/connection --flat --no-spec
+```
+
+- `<name>.model.ts`: the `@ObjectType('<Name>')` class, named `<Name>Model` in TypeScript. Every field has `@Field`; nullable and enum fields give their type, as in `@Field(() => String, { nullable: true })`. Describe fields that are not obvious, and name the requirement.
+- `<names>.service.ts`: the logic. It reads with Prisma, catches with `toDomainError`, and maps rows to models in a function at the bottom of the file. It never returns a Prisma type.
+- `<name>.resolver.ts`: one method per query or mutation, each with a `description`. Methods only delegate to the service.
+
+Register a Prisma enum for GraphQL with `registerEnumType` in the model file.
+
+### The caller
+
+`CallerModule` registers `CallerGuard` as `APP_GUARD`. It attaches the caller to every GraphQL request; plain HTTP routes pass through. Every resolver method that reads or writes owned data takes `@CurrentCaller() caller: Caller` and passes `caller.userId` to the service:
+
+```ts
+@Query(() => [ConnectionModel], {
+  description: "The caller's connections, sorted by display name.",
+})
+connections(@CurrentCaller() caller: Caller): Promise<ConnectionModel[]> {
+  return this.connectionsService.listForOwner(caller.userId);
+}
+```
+
+The service filters by owner in the Prisma query. A row of another owner, an unknown id and an id that is not a UUID all throw `NotFoundError`.
+
+### Errors
+
+`DomainErrorFilter` turns a domain error into a GraphQL error with `extensions.code` (for example `NOT_FOUND`), and an unknown error into `INTERNAL` with the message "Internal server error". Resolvers throw domain errors and nothing else.
+
+### Tests
+
+A resolver test is an e2e test: it starts a migrated Postgres, seeds it, writes rows with its own `PrismaClient`, boots `AppModule`, and posts queries to `/graphql` with `supertest`. It asserts `errors[0].extensions.code` for failures. A test with no database overrides `CallerService` with `{ getDefaultCaller: async () => ({ userId: 'test' }) }`.
