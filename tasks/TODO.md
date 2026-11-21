@@ -12,10 +12,10 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T01 Server config. `@nestjs/config` with a Zod schema and the `app` namespace (`HOST`, `PORT`), and `server/.env.example`. The server listens on `HOST`, default `127.0.0.1`.
 - [x] T02 Docker Compose for development data services: Postgres 19 with `pgvector`, and Redis 8.8. The api, web and proxy services come in T29.
 - [x] T03 Prisma client. Prisma 7.10.1 pinned exactly, the `prisma-client` generator writing to the git-ignored `src/generated/prisma`, the `database` config namespace, `PrismaModule` with one client on `PrismaPg`, and a Testcontainers database test.
+- [x] T04 Health checks. `HealthModule` with Terminus, `GET /health/live` and `GET /health/ready` (Postgres and Redis), the `redis` config namespace, and a Testcontainers e2e test.
 
 ## Foundation
 
-- [ ] T04 Health checks. `HealthModule` with a liveness route and a readiness route that checks Postgres and Redis. Checkpoint: first HTTP controller.
 - [ ] T05 Domain errors. The small set of domain errors, one Prisma error mapper, and one global filter registered with `APP_FILTER`. Checkpoint: error handling.
 
 ## Connections
