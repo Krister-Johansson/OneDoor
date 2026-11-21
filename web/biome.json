@@ -1,0 +1,40 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": "//",
+  "javascript": {
+    "formatter": {
+      "semicolons": "asNeeded"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": [
+                  "**/../**/server",
+                  "**/../**/server/**",
+                  "/**/server",
+                  "/**/server/**",
+                  "server",
+                  "server/**",
+                  "onedoor-server",
+                  "onedoor-server/**"
+                ],
+                "message": "web must not import from server. Read server/schema.gql for codegen instead."
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
