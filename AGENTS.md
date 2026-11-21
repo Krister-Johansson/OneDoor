@@ -79,8 +79,10 @@ version a skill is talking about before following it.
 - A task is done when `pnpm verify` passes in every project it touched. Run it yourself
   before saying the task is finished, and report the actual result.
 - If a spec is unclear or contradicts the code, stop and ask. Do not guess the intent.
-- Commit small, with a clear message. Do not push. There is no CI yet; the local
-  `verify` command is the gate.
+- Commit small, with a clear message. Push the task branch to `origin` and open a pull
+  request into `main`.
+- The repository does not use GitHub Actions, so there is no CI. The local `verify`
+  command is the gate.
 
 ## Checkpoints: stop after the first of each pattern
 
