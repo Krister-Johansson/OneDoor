@@ -5,9 +5,11 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { CallerModule } from './caller/caller.module.js';
 import { appConfig } from './config/app.config.js';
+import { cryptoConfig } from './config/crypto.config.js';
 import { databaseConfig } from './config/database.config.js';
 import { envSchema } from './config/env.schema.js';
 import { redisConfig } from './config/redis.config.js';
+import { CryptoModule } from './crypto/crypto.module.js';
 import { DomainErrorFilter } from './errors/domain-error.filter.js';
 import { GraphqlApiModule } from './graphql-api/graphql-api.module.js';
 import { HealthModule } from './health/health.module.js';
@@ -19,13 +21,14 @@ import { UpstreamsModule } from './upstreams/upstreams.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: envSchema,
-      load: [appConfig, databaseConfig, redisConfig],
+      load: [appConfig, cryptoConfig, databaseConfig, redisConfig],
     }),
     PrismaModule,
     HealthModule,
     GraphqlApiModule,
     UpstreamsModule,
     CallerModule,
+    CryptoModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_FILTER, useClass: DomainErrorFilter }],
