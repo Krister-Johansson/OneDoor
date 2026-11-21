@@ -7,6 +7,7 @@ import type { App } from 'supertest/types.js';
 import { seed } from '../prisma/seed.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { startMigratedPostgres } from './support/database.js';
+import { stubAppEnv } from './support/env.js';
 
 const CONNECTION_FIELDS = `
   id catalogEntryId displayName description url authType headerName headerPrefix enabled
@@ -70,8 +71,7 @@ describe('connections query (e2e)', () => {
       })
     ).id;
 
-    vi.stubEnv('DATABASE_URL', postgres.getConnectionUri());
-    vi.stubEnv('REDIS_URL', 'redis://127.0.0.1:1');
+    stubAppEnv({ DATABASE_URL: postgres.getConnectionUri() });
     const { AppModule } = await import('../src/app.module.js');
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],

@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import type { INestApplication } from '@nestjs/common';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
 import { Test } from '@nestjs/testing';
+import { stubAppEnv } from './support/env.js';
 
 // Load graphql the way Nest and Apollo load it. Vitest would otherwise give
 // this file graphql's ESM build, a second copy that cannot read their schema.
@@ -17,8 +18,7 @@ describe('GraphQL schema (e2e)', () => {
 
   beforeAll(async () => {
     // No database or Redis is needed. The values only pass config validation.
-    vi.stubEnv('DATABASE_URL', 'postgresql://test:test@127.0.0.1:1/test');
-    vi.stubEnv('REDIS_URL', 'redis://127.0.0.1:1');
+    stubAppEnv();
 
     const { AppModule } = await import('../src/app.module.js');
     const moduleRef = await Test.createTestingModule({

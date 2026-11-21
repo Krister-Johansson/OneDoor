@@ -17,6 +17,7 @@ import {
   UpstreamUnavailableError,
   ValidationError,
 } from '../src/errors/domain-errors.js';
+import { stubAppEnv } from './support/env.js';
 
 @Controller('throw')
 class ThrowingController {
@@ -79,8 +80,7 @@ describe('DomainErrorFilter (e2e)', () => {
 
   beforeAll(async () => {
     // No database or Redis is needed. The values only pass config validation.
-    vi.stubEnv('DATABASE_URL', 'postgresql://test:test@127.0.0.1:1/test');
-    vi.stubEnv('REDIS_URL', 'redis://127.0.0.1:1');
+    stubAppEnv();
 
     // AppModule registers the filter, so the test uses its real registration.
     const { AppModule } = await import('../src/app.module.js');

@@ -11,6 +11,7 @@ import {
 } from '@testcontainers/redis';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
+import { stubAppEnv } from './support/env.js';
 
 // The same images as docker-compose.yml.
 const POSTGRES_IMAGE = 'pgvector/pgvector:0.8.7-pg19-trixie';
@@ -27,8 +28,10 @@ describe('Health routes (e2e)', () => {
       new PostgreSqlContainer(POSTGRES_IMAGE).withPassword(password).start(),
       new RedisContainer(REDIS_IMAGE).start(),
     ]);
-    vi.stubEnv('DATABASE_URL', postgres.getConnectionUri());
-    vi.stubEnv('REDIS_URL', redis.getConnectionUrl());
+    stubAppEnv({
+      DATABASE_URL: postgres.getConnectionUri(),
+      REDIS_URL: redis.getConnectionUrl(),
+    });
 
     // Imported after the stubs, so config validation sees the containers.
     const { AppModule } = await import('../src/app.module.js');
