@@ -87,3 +87,42 @@ The server listens on 3000 and the web dev server on 3001.
 ### Path aliases in web
 
 shadcn writes imports with the `#/` alias (`#/components`, `#/lib/utils`, `#/hooks`), which maps to `web/src/`. Use `#/` in hand-written web code too.
+
+## Server config
+
+Approved 2026-11-21.
+
+Each area of config is one namespace in `server/src/config/<area>.config.ts`. The file exports a Zod schema named `<area>EnvSchema` for the environment variables the area owns, and a `registerAs('<area>')` factory named `<area>Config`. The factory parses `process.env` with the schema and returns typed values with camelCase keys:
+
+```ts
+export const appEnvSchema = z.object({
+  HOST: z.string().min(1).default('127.0.0.1'),
+  PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+});
+
+export const appConfig = registerAs('app', () => {
+  const env = appEnvSchema.parse(process.env);
+  return { host: env.HOST, port: env.PORT };
+});
+```
+
+The factory parses the schema itself because `@nestjs/config` hands `registerAs` factories the raw `process.env` strings.
+
+To add a namespace:
+
+1. Write `<area>.config.ts` and `<area>.config.spec.ts`. The spec covers the defaults, the coercion and at least one rejected value.
+2. Spread the schema into `envSchema` in `server/src/config/env.schema.ts`. `ConfigModule` validates `envSchema` at startup, so an invalid value stops the boot.
+3. Add the factory to `load` in `ConfigModule.forRoot` in `app.module.ts`.
+4. Add every variable to `server/.env.example` under a `# <area>:` comment. Secrets get an empty value.
+
+Read config by injecting the namespace, never with `process.env` or a string key on `ConfigService`:
+
+```ts
+constructor(
+  @Inject(appConfig.KEY) private readonly app: ConfigType<typeof appConfig>,
+) {}
+```
+
+In `main.ts`, use `app.get<ConfigType<typeof appConfig>>(appConfig.KEY)`.
+
+Unit tests set variables with `vi.stubEnv` and restore them with `vi.unstubAllEnvs` in `afterEach`.
