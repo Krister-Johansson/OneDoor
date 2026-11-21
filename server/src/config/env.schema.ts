@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { appEnvSchema } from './app.config.js';
+import { databaseEnvSchema } from './database.config.js';
 
 // Validated by ConfigModule at startup. Add each namespace's schema here.
 export const envSchema = z.object({
   ...appEnvSchema.shape,
+  ...databaseEnvSchema.shape,
 });
