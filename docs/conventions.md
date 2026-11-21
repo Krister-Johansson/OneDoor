@@ -288,3 +288,55 @@ beforeAll(async () => {
 ```
 
 Call routes with `supertest` on `app.getHttpServer()`. Close the app before stopping the containers. A test that touches credentials starts Postgres with a random password and asserts that the response does not contain it.
+
+## Errors
+
+Approved 2026-11-22.
+
+### Domain errors
+
+Services throw only the errors in `server/src/errors/domain-errors.ts`. Each has a stable `code`, and its message is safe to show a client. Details for the log go in `cause`.
+
+| Error | `code` | HTTP |
+|---|---|---|
+| `NotFoundError` | `NOT_FOUND` | 404 |
+| `ConflictError` | `CONFLICT` | 409 |
+| `ForbiddenError` | `FORBIDDEN` | 403 |
+| `ValidationError` | `VALIDATION` | 400 |
+| `UpstreamUnavailableError` | `UPSTREAM_UNAVAILABLE` | 502 |
+| `InternalError` | `INTERNAL` | 500 |
+
+```ts
+throw new NotFoundError('Connection not found');
+throw new UpstreamUnavailableError('GitHub is unreachable', { cause: error });
+```
+
+Do not add a new error class or code without asking.
+
+### Prisma errors
+
+Every Prisma call in a service sits in a `try` block whose `catch` throws `toDomainError(error, '<Resource>')` from `server/src/prisma/prisma-error.mapper.ts`:
+
+```ts
+try {
+  return await this.prisma.connection.create({ data });
+} catch (error) {
+  throw toDomainError(error, 'Connection');
+}
+```
+
+It maps P2002 and P2003 to `ConflictError`, P2025 to `NotFoundError` and P2000 to `ValidationError`. It returns a domain error unchanged and turns anything else into `InternalError` with the original as `cause`. Map a new Prisma code in this one function, with a test in `prisma-error.mapper.spec.ts`.
+
+Catch a unique violation instead of checking for a duplicate first.
+
+### The global filter
+
+`DomainErrorFilter` is the one global filter, registered in `AppModule` as `{ provide: APP_FILTER, useClass: DomainErrorFilter }`. For HTTP:
+
+- A `DomainError` gets its status and the body `{ statusCode, code, message }`.
+- An `HttpException` passes through unchanged. Validation pipes, guards, Terminus and Nest's unknown-route 404 throw these.
+- Anything else is logged with its stack and answered as `INTERNAL` with the message "Internal server error".
+
+It handles only HTTP. The GraphQL mapping to `extensions.code` comes with the GraphQL API. MCP tool errors do not use the filter; they are returned as results with `isError: true`.
+
+An e2e test for an error path boots `AppModule` with a test-only controller, so it goes through the real filter registration (see `server/test/errors.e2e-spec.ts`).
