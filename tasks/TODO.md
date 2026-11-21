@@ -14,12 +14,12 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T03 Prisma client. Prisma 7.10.1 pinned exactly, the `prisma-client` generator writing to the git-ignored `src/generated/prisma`, the `database` config namespace, `PrismaModule` with one client on `PrismaPg`, and a Testcontainers database test.
 - [x] T04 Health checks. `HealthModule` with Terminus, `GET /health/live` and `GET /health/ready` (Postgres and Redis), the `redis` config namespace, and a Testcontainers e2e test.
 - [x] T05 Domain errors. Six domain errors with stable codes, `toDomainError()` for Prisma errors, and `DomainErrorFilter` registered with `APP_FILTER` (HTTP only; GraphQL comes with T07).
+- [x] T06 User, catalog and connection models. `User`, `CatalogEntry` and `Connection` with citext display names and three check constraints, migration `20261121233730_connections`, and the seed for `me`.
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T06 User, catalog and connection models. Prisma models `User`, `CatalogEntry` and `Connection` (owner, optional catalog entry, display name, description, URL, auth type, header name and prefix, mode, enabled), a migration created with `--create-only`, and a seed for the user `me`. Checkpoint: first Prisma model, migration and seed. Human review: migration.
 - [ ] T07 GraphQL setup and the `connections` query. Code-first with the Apollo driver, `server/schema.gql` emitted and committed, a schema drift check in server `verify`, and a guard that attaches `me` as the caller. Adds `connection.model.ts` and `connection.resolver.ts` with every query filtered by owner (REQ-CONN-001), and the GraphQL branch of `DomainErrorFilter` (domain errors as GraphQL errors with `extensions.code`). Checkpoint: first GraphQL model and resolver. Human review: the guard.
 - [ ] T08 Secret storage. `SecretStore` abstract class, AES-256-GCM implementation, key and key id from config, bound with a factory provider. Checkpoint: first interface with implementation and provider binding. Human review: encryption and key handling.
 - [ ] T09 Custom connections. `createConnection`, `updateConnection`, `setConnectionEnabled` and `removeConnection`, with `connection.input.ts` validated by `class-validator`. Secrets are encrypted with `SecretStore`, and GraphQL returns only `hasApiKey` and `hasClientSecret`. Covers REQ-CONN-020 to 023, 040 to 044 and 050 to 052. Checkpoint: first GraphQL input and mutation. Human review: credential storage.
