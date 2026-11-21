@@ -126,3 +126,28 @@ constructor(
 In `main.ts`, use `app.get<ConfigType<typeof appConfig>>(appConfig.KEY)`.
 
 Unit tests set variables with `vi.stubEnv` and restore them with `vi.unstubAllEnvs` in `afterEach`.
+
+## Docker Compose
+
+Approved 2026-11-21.
+
+`/docker-compose.yml` sets `name: onedoor`. Every service in it follows these rules:
+
+- Pin the image to an exact version tag, such as `pgvector/pgvector:0.8.7-pg19-trixie` or `redis:8.8.4-alpine`. Never use `latest` or a bare major.
+- Publish ports on `127.0.0.1` only, for example `"127.0.0.1:5432:5432"`.
+- Keep data in a named volume. For Postgres 18 and later, mount it at `/var/lib/postgresql`, not `/var/lib/postgresql/data`.
+- Give the service a healthcheck, so `docker compose up -d --wait` returns only when it is ready.
+- Set `restart: unless-stopped`.
+
+Secrets come from the root `.env`, which Compose reads and git ignores. A required secret uses `${NAME:?message}`, so Compose refuses to start without it. A non-secret uses `${NAME:-default}`. List every variable in the root `.env.example`, with secrets left empty:
+
+```yaml
+POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env, see .env.example}
+POSTGRES_USER: ${POSTGRES_USER:-onedoor}
+```
+
+Redis runs with `--maxmemory-policy noeviction --appendonly yes`, which BullMQ requires.
+
+Postgres extensions (`vector`, `pg_trgm`) are not created by Compose. Migration SQL creates them.
+
+Start the services with `docker compose up -d --wait` and stop them with `docker compose down`. Use `docker compose down -v` only when you mean to delete the data.

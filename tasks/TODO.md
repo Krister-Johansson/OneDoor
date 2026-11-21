@@ -10,10 +10,10 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 
 - [x] T00 Scaffold `server/` and `web/` with Biome, the cross-project import rule and `verify` scripts.
 - [x] T01 Server config. `@nestjs/config` with a Zod schema and the `app` namespace (`HOST`, `PORT`), and `server/.env.example`. The server listens on `HOST`, default `127.0.0.1`.
+- [x] T02 Docker Compose for development data services: Postgres 19 with `pgvector`, and Redis 8.8. The api, web and proxy services come in T29.
 
 ## Foundation
 
-- [ ] T02 Docker Compose for development data services: Postgres with `pgvector` and `pg_trgm`, and Redis. The api, web and proxy services come in T29. Checkpoint: Docker Compose file.
 - [ ] T03 Prisma client. Add Prisma 7 pinned exactly, the `prisma-client` generator with an explicit `output`, a `PrismaModule` with one client on the `PrismaPg` adapter, and the `prisma` scripts from `server/AGENTS.md`. One database test against Postgres started by Testcontainers. Checkpoint: first Nest module, first database test.
 - [ ] T04 Health checks. `HealthModule` with a liveness route and a readiness route that checks Postgres and Redis. Checkpoint: first HTTP controller.
 - [ ] T05 Domain errors. The small set of domain errors, one Prisma error mapper, and one global filter registered with `APP_FILTER`. Checkpoint: error handling.
