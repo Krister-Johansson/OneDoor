@@ -16,12 +16,12 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T05 Domain errors. Six domain errors with stable codes, `toDomainError()` for Prisma errors, and `DomainErrorFilter` registered with `APP_FILTER` (HTTP; GraphQL added in T07).
 - [x] T06 User, catalog and connection models. `User`, `CatalogEntry` and `Connection` with citext display names and three check constraints, migration `20261121233730_connections`, and the seed for `me`.
 - [x] T07 GraphQL setup and the `connections` query. Apollo code-first, `server/schema.gql` with a drift test, `CallerGuard` attaching `me`, `connections` and `connection(id)` filtered by owner, and GraphQL error codes from `DomainErrorFilter`.
+- [x] T08 Secret storage. `SecretStore` with `AesGcmSecretStore` (AES-256-GCM, context as associated data), the `crypto` config namespace, and the factory binding in `CryptoModule`.
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T08 Secret storage. `SecretStore` abstract class, AES-256-GCM implementation, key and key id from config, bound with a factory provider. Checkpoint: first interface with implementation and provider binding. Human review: encryption and key handling.
 - [ ] T09 Custom connections. `createConnection`, `updateConnection`, `setConnectionEnabled` and `removeConnection`, with `connection.input.ts` validated by `class-validator`. Secrets are encrypted with `SecretStore`, and GraphQL returns only `hasApiKey` and `hasClientSecret`. Covers REQ-CONN-020 to 023, 040 to 044, 051 and 052. Checkpoint: first GraphQL input and mutation. Human review: credential storage.
 - [ ] T10 Catalog. Seed entries for GitHub, Context7 and Azure DevOps once their values are confirmed (see the spec's open questions), OAuth client details for catalog entries from config, the `catalog` query and `switchOnCatalogEntry`. Covers REQ-CONN-010 to 012. Human review: credential handling.
 - [ ] T11 Probe and credentials check. `probeServer` and `checkCredentials`, with the network rules for fetching. Covers REQ-CONN-060 to 063. Human review: fetching user-supplied URLs.
