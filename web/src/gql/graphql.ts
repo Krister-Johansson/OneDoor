@@ -100,6 +100,7 @@ export type CatalogQuery = {
       setupState: SetupState
       enabled: boolean
       status: ConnectionStatus
+      toolCount: number
     } | null
   }>
 }
@@ -117,6 +118,7 @@ export type SwitchOnCatalogEntryMutation = {
     setupState: SetupState
     enabled: boolean
     status: ConnectionStatus
+    toolCount: number
   }
 }
 
@@ -140,6 +142,7 @@ export type ConnectionsQuery = {
     iconUrl: string
     enabled: boolean
     status: ConnectionStatus
+    toolCount: number
   }>
 }
 
@@ -189,7 +192,16 @@ export type UpdateConnectionMutation = {
     iconUrl: string
     enabled: boolean
     status: ConnectionStatus
+    toolCount: number
   }
+}
+
+export type ResyncToolsMutationVariables = Exact<{
+  id: string | number
+}>
+
+export type ResyncToolsMutation = {
+  resyncTools: { __typename: "Connection"; id: string; toolCount: number }
 }
 
 export type RemoveConnectionMutationVariables = Exact<{
@@ -207,6 +219,18 @@ export type ConnectionStatusChangedSubscription = {
     __typename: "Connection"
     id: string
     status: ConnectionStatus
+  }
+}
+
+export type ConnectionToolsSyncedSubscriptionVariables = Exact<{
+  [key: string]: never
+}>
+
+export type ConnectionToolsSyncedSubscription = {
+  connectionToolsSynced: {
+    __typename: "Connection"
+    id: string
+    toolCount: number
   }
 }
 
@@ -298,6 +322,10 @@ export const CatalogDocument = {
                         kind: "Field",
                         name: { kind: "Name", value: "status" },
                       },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "toolCount" },
+                      },
                     ],
                   },
                 },
@@ -375,6 +403,7 @@ export const SwitchOnCatalogEntryDocument = {
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
                 { kind: "Field", name: { kind: "Name", value: "status" } },
+                { kind: "Field", name: { kind: "Name", value: "toolCount" } },
               ],
             },
           },
@@ -429,6 +458,7 @@ export const ConnectionsDocument = {
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
                 { kind: "Field", name: { kind: "Name", value: "status" } },
+                { kind: "Field", name: { kind: "Name", value: "toolCount" } },
               ],
             },
           },
@@ -649,6 +679,7 @@ export const UpdateConnectionDocument = {
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
                 { kind: "Field", name: { kind: "Name", value: "status" } },
+                { kind: "Field", name: { kind: "Name", value: "toolCount" } },
               ],
             },
           },
@@ -660,6 +691,52 @@ export const UpdateConnectionDocument = {
   UpdateConnectionMutation,
   UpdateConnectionMutationVariables
 >
+export const ResyncToolsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "ResyncTools" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "ID" } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "resyncTools" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "toolCount" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<ResyncToolsMutation, ResyncToolsMutationVariables>
 export const RemoveConnectionDocument = {
   kind: "Document",
   definitions: [
@@ -730,6 +807,35 @@ export const ConnectionStatusChangedDocument = {
 } as unknown as DocumentNode<
   ConnectionStatusChangedSubscription,
   ConnectionStatusChangedSubscriptionVariables
+>
+export const ConnectionToolsSyncedDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "subscription",
+      name: { kind: "Name", value: "ConnectionToolsSynced" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "connectionToolsSynced" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "toolCount" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  ConnectionToolsSyncedSubscription,
+  ConnectionToolsSyncedSubscriptionVariables
 >
 export const ProbeServerDocument = {
   kind: "Document",

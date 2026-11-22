@@ -264,6 +264,11 @@ enum SetupState {
 type Subscription {
   """Sends one of the caller's connections each time its status changes."""
   connectionStatusChanged: Connection!
+
+  """
+  Sends one of the caller's connections each time a sync of its tools finishes, with its new toolCount.
+  """
+  connectionToolsSynced: Connection!
 }
 
 """

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { OPEN_TWIN_TITLE } from "./twins/open-twin"
+import { OPEN_TWIN_TITLE, OPEN_TWIN_TOOLS } from "./twins/open-twin"
 
 function twinUrl(): string {
   const url = process.env.E2E_TWIN_URL
@@ -108,4 +108,56 @@ test("shows the live status of a server's connection (T17)", async ({
     { id, input: { url: "http://127.0.0.1:1/mcp" } },
   )
   await expect(row).toContainText("Unreachable")
+})
+
+test("shows a server's tool count live and re-syncs its tools (T18)", async ({
+  page,
+  request,
+}) => {
+  const data = await graphql(
+    request,
+    "mutation ($input: CreateConnectionInput!) { createConnection(input: $input) { id } }",
+    {
+      input: {
+        displayName: "Synced Twin",
+        url: "http://127.0.0.1:1/mcp",
+        authType: "NONE",
+      },
+    },
+  )
+  const id = data.createConnection?.id
+
+  await page.goto("/servers")
+  const row = page.getByRole("listitem").filter({ hasText: "Synced Twin" })
+  const resync = row.getByRole("button", { name: "Re-sync tools" })
+  // A connection that never synced shows no count, and no re-sync while it
+  // is not connected.
+  await expect(row).toContainText("Unreachable")
+  await expect(row).not.toContainText("tools")
+
+  // The page does not reload or refetch: the count arrives over the socket
+  // once the first sync finishes.
+  await graphql(
+    request,
+    "mutation ($id: ID!, $input: UpdateConnectionInput!) { updateConnection(id: $id, input: $input) { id } }",
+    { id, input: { url: twinUrl() } },
+  )
+  await expect(row).toContainText("Connected")
+  await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
+
+  // The button waits for the sync to finish, which changes nothing here.
+  await resync.click()
+  await expect(resync).toBeEnabled()
+  await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
+  await expect(row.getByRole("alert")).toHaveCount(0)
+
+  // An unreachable server keeps its tools and hides the button.
+  await graphql(
+    request,
+    "mutation ($id: ID!, $input: UpdateConnectionInput!) { updateConnection(id: $id, input: $input) { id } }",
+    { id, input: { url: "http://127.0.0.1:1/mcp" } },
+  )
+  await expect(row).toContainText("Unreachable")
+  await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
+  await expect(resync).toHaveCount(0)
 })

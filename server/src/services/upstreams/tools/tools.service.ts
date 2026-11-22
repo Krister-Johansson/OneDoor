@@ -1,27 +1,50 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { EventBus } from '../../../events/event-bus.js';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { toDomainError } from '../../../prisma/prisma-error.mapper.js';
-import type { ToolSyncResult, UpstreamTool } from './tool.interface.js';
+import {
+  CONNECTION_TOOLS_SYNCED,
+  type ConnectionToolsSynced,
+  type ToolSyncResult,
+  type UpstreamTool,
+} from './tool.interface.js';
 import { toolContentHash } from './tool-hash.js';
 
 // The stored tools of each connection.
 @Injectable()
 export class ToolsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ToolsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventBus: EventBus,
+  ) {}
+
+  // The syncs of the owner's connections, as they finish.
+  toolSyncs(
+    ownerId: string,
+  ): Promise<AsyncIterableIterator<ConnectionToolsSynced>> {
+    return this.eventBus.subscribe(
+      CONNECTION_TOOLS_SYNCED,
+      (event) => event.ownerId === ownerId,
+    );
+  }
 
   // Makes the connection's stored tools match `listed`, the tools its
   // upstream server listed just now. A tool keeps its id while its name
   // stays; its row is rewritten only when its content hash changes. Returns
-  // null when the connection no longer exists.
+  // null when the connection no longer exists. Each stored sync is
+  // published on the EventBus.
   async replaceTools(
     connectionId: string,
     listed: UpstreamTool[],
   ): Promise<ToolSyncResult | null> {
     // A server that lists a name twice is taken at its last entry.
     const byName = new Map(listed.map((tool) => [tool.name, tool]));
+    let synced: { result: ToolSyncResult; ownerId: string } | null;
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      synced = await this.prisma.$transaction(async (tx) => {
         const connection = await tx.connection.findUnique({
           where: { id: connectionId },
           select: { ownerId: true },
@@ -66,11 +89,25 @@ export class ToolsService {
             result.added += 1;
           }
         }
-        return result;
+        return { result, ownerId: connection.ownerId };
       });
     } catch (error) {
       throw toDomainError(error, 'Tool');
     }
+    if (!synced) return null;
+    this.published(connectionId, synced.ownerId);
+    return synced.result;
+  }
+
+  // Publishes in the background: a sync never waits for Redis.
+  private published(connectionId: string, ownerId: string): void {
+    this.eventBus
+      .publish(CONNECTION_TOOLS_SYNCED, { connectionId, ownerId })
+      .catch((error: unknown) =>
+        this.logger.warn(
+          `Could not publish the tool sync of connection ${connectionId}: ${String(error)}`,
+        ),
+      );
   }
 }
 

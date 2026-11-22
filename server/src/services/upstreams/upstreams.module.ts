@@ -45,6 +45,7 @@ import { ToolsService } from './tools/tools.service.js';
     CatalogService,
     ProbeService,
     UpstreamRegistryService,
+    ToolsService,
   ],
 })
 export class UpstreamsModule {}
