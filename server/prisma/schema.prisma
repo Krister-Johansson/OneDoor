@@ -19,6 +19,7 @@ model User {
   name        String       @unique
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   connections Connection[]
+  tools       Tool[]
 
   @@map("user")
 }
@@ -114,7 +115,11 @@ model Connection {
   icon                        Icon?              @relation(fields: [iconId], references: [id], onDelete: SetNull)
   createdAt                   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  tools                       Tool[]
 
+  /// The target of Tool's (connection_id, owner_id) foreign key, so a tool
+  /// always has its connection's owner.
+  @@unique([id, ownerId])
   @@unique([ownerId, displayName])
   @@unique([ownerId, catalogEntryId])
   @@index([catalogEntryId])
@@ -136,4 +141,35 @@ model Icon {
   catalogEntries CatalogEntry[]
 
   @@map("icon")
+}
+
+/// A tool of a connection's upstream server, as the last tool sync listed it
+/// (T18). A failed sync and a disabled connection keep the stored tools;
+/// removing the connection deletes them (REQ-CONN-052).
+model Tool {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  /// Always the connection's owner: the connection relation uses both columns.
+  ownerId      String     @map("owner_id") @db.Uuid
+  owner        User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  connectionId String     @map("connection_id") @db.Uuid
+  connection   Connection @relation(fields: [connectionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  /// The name the upstream server uses. Unique per connection, so a tool
+  /// keeps its id across syncs.
+  name         String
+  title        String?
+  description  String     @default("")
+  inputSchema  Json       @map("input_schema")
+  outputSchema Json?      @map("output_schema")
+  /// MCP tool annotations. Untrusted hints from the server: shown as labels,
+  /// never enforced.
+  annotations  Json?
+  /// SHA-256 of the canonical JSON of name, title, description, the schemas
+  /// and the annotations. A sync rewrites a tool only when this changes.
+  contentHash  String     @map("content_hash")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([connectionId, name])
+  @@index([ownerId])
+  @@map("tool")
 }

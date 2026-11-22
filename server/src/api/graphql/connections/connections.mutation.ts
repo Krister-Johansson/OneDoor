@@ -42,6 +42,17 @@ export class ConnectionsMutation {
     return this.connectionsService.setEnabled(caller.userId, id, enabled);
   }
 
+  @Mutation(() => ConnectionModel, {
+    description:
+      "Queues a sync of the connection's tools with its upstream server. UPSTREAM_UNAVAILABLE when the connection is not CONNECTED.",
+  })
+  resyncTools(
+    @CurrentCaller() caller: Caller,
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<ConnectionModel> {
+    return this.connectionsService.resyncTools(caller.userId, id);
+  }
+
   @Mutation(() => ID, {
     description:
       'Removes a connection with its credentials, and returns its id (REQ-CONN-052).',

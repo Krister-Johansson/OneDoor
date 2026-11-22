@@ -5,13 +5,16 @@ import {
   ConflictError,
   InternalError,
   NotFoundError,
+  UpstreamUnavailableError,
   ValidationError,
 } from '../../../errors/domain-errors.js';
 import { AuthType } from '../../../generated/prisma/enums.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { toDomainError } from '../../../prisma/prisma-error.mapper.js';
 import { IconRefreshService } from '../icon-refresh/icon-refresh.service.js';
+import { ConnectionStatus } from '../registry/connection-status.interface.js';
 import { UpstreamRegistryService } from '../registry/upstream-registry.service.js';
+import { ToolSyncService } from '../tool-sync/tool-sync.service.js';
 import type {
   Connection,
   CreateConnectionData,
@@ -48,6 +51,7 @@ export class ConnectionsService {
     private readonly secretStore: SecretStore,
     private readonly iconRefresh: IconRefreshService,
     private readonly registry: UpstreamRegistryService,
+    private readonly toolSync: ToolSyncService,
   ) {}
 
   // The owner's connections, sorted by display name, ignoring case.
@@ -228,6 +232,18 @@ export class ConnectionsService {
     } catch (error) {
       throw toDomainError(error, 'Connection');
     }
+  }
+
+  // Queues a tool sync (T18). The sync needs a connected upstream client.
+  async resyncTools(ownerId: string, id: string): Promise<Connection> {
+    const connection = await this.getForOwner(ownerId, id);
+    if (this.registry.status(id) !== ConnectionStatus.CONNECTED) {
+      throw new UpstreamUnavailableError(
+        `${connection.displayName} is not connected, so its tools cannot be synced`,
+      );
+    }
+    this.toolSync.syncInBackground(id);
+    return connection;
   }
 
   // REQ-CONN-052. Returns the id of the removed connection.

@@ -24,6 +24,8 @@ import {
   CONNECTION_INCLUDE,
   toConnection,
 } from '../connections/connection.mapper.js';
+import { ToolSyncService } from '../tool-sync/tool-sync.service.js';
+import type { UpstreamTool } from '../tools/tool.interface.js';
 import {
   CONNECTION_STATUS_CHANGED,
   ConnectionStatus,
@@ -31,6 +33,7 @@ import {
 } from './connection-status.interface.js';
 
 export const CONNECT_TIMEOUT_MS = 10_000;
+export const LIST_TOOLS_TIMEOUT_MS = 30_000;
 const CLIENT_INFO = { name: 'onedoor', version: '0.0.1' };
 
 // One upstream client and what it was opened for. A sync that wants another
@@ -77,6 +80,7 @@ export class UpstreamRegistryService
     private readonly prisma: PrismaService,
     private readonly guardedFetch: GuardedFetch,
     private readonly eventBus: EventBus,
+    private readonly toolSync: ToolSyncService,
     @Inject(upstreamsConfig.KEY)
     private readonly upstreams: ConfigType<typeof upstreamsConfig>,
   ) {}
@@ -113,6 +117,17 @@ export class UpstreamRegistryService
       case 'failed':
         return ConnectionStatus.FAILED;
     }
+  }
+
+  // Every tool the connection's server lists, or null when the connection
+  // has no connected client. Throws when the server fails to answer.
+  async listTools(connectionId: string): Promise<UpstreamTool[] | null> {
+    const client = this.client(connectionId);
+    if (!client) return null;
+    const { tools } = await client.listTools(undefined, {
+      timeout: LIST_TOOLS_TIMEOUT_MS,
+    });
+    return tools;
   }
 
   // Status changes of the owner's connections, from now on. A removed
@@ -209,7 +224,17 @@ export class UpstreamRegistryService
     url: string,
   ): Promise<void> {
     const stop = new AbortController();
-    const client = new Client(CLIENT_INFO);
+    // A server that announces a changed tool list gets its tools synced.
+    // Servers on the 2026-07-28 protocol send no unsolicited notifications,
+    // so for them a sync runs on connect and on the re-sync action only.
+    const client = new Client(CLIENT_INFO, {
+      listChanged: {
+        tools: {
+          autoRefresh: false,
+          onChanged: () => this.toolSync.syncInBackground(connectionId),
+        },
+      },
+    });
     const transport = new StreamableHTTPClientTransport(new URL(url), {
       fetch: stoppable(this.guardedFetch.create(), stop.signal),
     });
@@ -255,6 +280,7 @@ export class UpstreamRegistryService
     }
     entry.state = 'connected';
     this.changed(connectionId, entry.ownerId);
+    this.toolSync.syncInBackground(connectionId);
     this.logger.log(`Connected upstream client for connection ${connectionId}`);
   }
 

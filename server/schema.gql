@@ -99,6 +99,11 @@ type Connection {
   The state of the connection's upstream client in this server. Live updates come from connectionStatusChanged.
   """
   status: ConnectionStatus!
+
+  """
+  How many tools the last tool sync stored. A failed sync and a disabled connection keep them.
+  """
+  toolCount: Int!
   updatedAt: DateTime!
   url: String!
 }
@@ -183,6 +188,11 @@ type Mutation {
   Removes a connection with its credentials, and returns its id (REQ-CONN-052).
   """
   removeConnection(id: ID!): ID!
+
+  """
+  Queues a sync of the connection's tools with its upstream server. UPSTREAM_UNAVAILABLE when the connection is not CONNECTED.
+  """
+  resyncTools(id: ID!): Connection!
 
   """Enables or disables a connection (REQ-CONN-051)."""
   setConnectionEnabled(enabled: Boolean!, id: ID!): Connection!

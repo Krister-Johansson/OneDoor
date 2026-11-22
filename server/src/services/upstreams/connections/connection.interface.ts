@@ -25,6 +25,8 @@ export interface Connection {
   setupState: SetupState;
   iconUrl: string;
   enabled: boolean;
+  // How many tools the last tool sync stored.
+  toolCount: number;
   createdAt: Date;
   updatedAt: Date;
 }

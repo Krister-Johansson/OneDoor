@@ -13,11 +13,13 @@ import { type Connection, SetupState } from './connection.interface.js';
 export const CONNECTION_INCLUDE = {
   catalogEntry: true,
   catalogAuthOption: true,
+  _count: { select: { tools: true } },
 } as const;
 
 export type ConnectionRow = ConnectionRecord & {
   catalogEntry: CatalogEntryRecord | null;
   catalogAuthOption: CatalogAuthOptionRecord | null;
+  _count: { tools: number };
 };
 
 // REQ-CONN-044.
@@ -70,6 +72,7 @@ export function toConnection(row: ConnectionRow): Connection {
       displayName,
     ),
     enabled: row.enabled,
+    toolCount: row._count.tools,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
