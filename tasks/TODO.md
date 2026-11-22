@@ -26,6 +26,7 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T15 Catalog switch and server dialogs. The catalog switch with the auth option choice, the add dialog with probe pre-fill and the credentials check (TanStack Form), the edit form with write-only secrets, and remove with confirmation (REQ-CONN-080 to 082).
 - [x] T15b Web end-to-end tests. Playwright with `pnpm e2e` (not part of `verify`), global setup with containers, a web twin, the built server and web app, and flows for adding a server and the catalog switch.
 - [x] T16 Upstream registry. `UpstreamRegistryService` with one MCP client per enabled, `READY` and `NONE` connection, connected from `onApplicationBootstrap` without blocking, synced after every connection write, closed in `onModuleDestroy`, and the `upstreams` config namespace (`UPSTREAM_CONNECTING`).
+- [x] T17 Live connection status. `EventBus` with `RedisEventBus` (`EVENT_BUS`), `Connection.status` (OFF, CONNECTING, CONNECTED, FAILED) from the registry, the `connectionStatusChanged` subscription over `graphql-ws` with a socket origin check, and a live status badge on the servers screen.
 
 ## Connections
 
@@ -35,7 +36,6 @@ Spec: `specs/connections.md`.
 
 Needs spec: `specs/upstreams.md`. Needs fake upstream MCP servers in `server/test/twins/`, which are human-owned.
 
-- [ ] T17 Live connection status. `EventBus` abstract class with a Redis implementation, a status subscription over `graphql-ws`, and a live badge in web. The server part is merged (PR #47); the web badge is open.
 - [ ] T18 Tool sync. A BullMQ job when a connection becomes enabled and `READY`, and on tool-list change: list tools, diff by content hash, store the tools. Adds a "re-sync tools" action.
 - [ ] T19 Tool policy. An enabled flag per tool, set by the owner, with new tools enabled. MCP annotations are shown as labels and never enforced. Adds the tools screen per connection.
 - [ ] T20 Upstream auth with an API key. `UpstreamAuthProvider` abstract class with the `NONE` and `API_KEY` implementations. Human review: credential handling.

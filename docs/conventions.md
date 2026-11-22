@@ -773,6 +773,23 @@ Pass the generated document to Apollo's hooks, with no type arguments. A query a
 - The browser talks only to the web server. Nitro `routeRules` in `vite.config.ts` forward `/graphql` and `/icons/**` to `API_URL` (default `http://127.0.0.1:3000`). Vite's `server.proxy` has no effect under Nitro.
 - `API_URL` is listed in `web/.env.example`.
 
+### Subscriptions
+
+Approved 2026-11-22.
+
+- In the browser, `createLink()` in `src/router.tsx` splits subscriptions onto one `GraphQLWsLink` (`createClient` from `graphql-ws`); queries and mutations stay on `HttpLink`. Server-side rendering uses `HttpLink` only and runs no subscriptions.
+- Nitro forwards only HTTP, so the socket goes straight to the OneDoor server at `graphqlSocketUrl()`: `VITE_GRAPHQL_WS_URL`, read at build time, default `ws://127.0.0.1:3000/graphql`. This is the one exception to "the browser talks only to the web server". The server accepts sockets only from pages served from this machine.
+- A subscription selects `id` and the changed fields, so Apollo updates the cached object by id and every view of it re-renders. Add each such field to every selection of that type (queries and mutation results), so the cache always has it.
+- A subscription hook in `src/hooks/` calls `useSubscription(<Document>)` and returns nothing when the cache does the work. The route component calls it once per screen:
+
+```ts
+export function useConnectionStatusChanges(): void {
+  useSubscription(ConnectionStatusChangedDocument)
+}
+```
+
+- A component that shows a live value wraps it in `aria-live="polite"`, so screen readers announce the change.
+
 ## Web routes, hooks and components
 
 Approved 2026-11-22.
@@ -882,7 +899,8 @@ Approved 2026-11-22.
 
 - Postgres and Redis containers from the Compose images, and the fake upstream servers in `web/e2e/twins/`.
 - The server, run from `../server` as processes: `prisma migrate deploy`, `prisma db seed`, `tsc -p tsconfig.build.json --outDir .e2e-build`, then `node .e2e-build/main.js` on port 3100 with `ICON_FETCHING=false` and a random `SECRET_STORE_KEY`. web never imports server code.
-- The web app, built with `API_URL` set to the server and run from `.output` on port 3101.
+- The server runs with `UPSTREAM_CONNECTING=true`. Only NONE connections connect, and no seeded catalog entry is NONE, so clients reach only the twins.
+- The web app, built with `API_URL` and `VITE_GRAPHQL_WS_URL` set to the server and run from `.output` on port 3101.
 - Process output goes to `web/test-results/api.log` and `web.log`.
 
 Values the flows need, such as a twin's URL, go through `process.env` (`E2E_TWIN_URL`).
@@ -895,4 +913,5 @@ Values the flows need, such as a twin's URL, go through `process.env` (`E2E_TWIN
 - Find elements by role and accessible name (`getByRole("switch", { name: "Use GitHub" })`) or by label, not by CSS classes.
 - A twin in `web/e2e/twins/` is a small fake MCP server on 127.0.0.1 with a free port. Twins do not reach the network.
 - After adding a flow, break the behaviour it covers once and see it fail.
+- To show that a value is live, change the data from outside the page with `request.post("/graphql", ...)` and assert the page updates without a reload.
 
