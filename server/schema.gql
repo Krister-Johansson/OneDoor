@@ -94,8 +94,23 @@ type Connection {
   """The OAuth client id of a custom OAUTH_MANUAL connection."""
   oauthClientId: String
   setupState: SetupState!
+
+  """
+  The state of the connection's upstream client in this server. Live updates come from connectionStatusChanged.
+  """
+  status: ConnectionStatus!
   updatedAt: DateTime!
   url: String!
+}
+
+"""
+The state of a connection's upstream client. OFF: no client is wanted (disabled, not READY, or an auth type without a client yet). FAILED: the last connect failed, until the next change to the connection.
+"""
+enum ConnectionStatus {
+  CONNECTED
+  CONNECTING
+  FAILED
+  OFF
 }
 
 """A custom server to add (REQ-CONN-020)."""
@@ -234,6 +249,11 @@ type Query {
 enum SetupState {
   NEEDS_CREDENTIALS
   READY
+}
+
+type Subscription {
+  """Sends one of the caller's connections each time its status changes."""
+  connectionStatusChanged: Connection!
 }
 
 """

@@ -4,11 +4,18 @@ import {
   type Connection,
   SetupState,
 } from '../../../../services/upstreams/connections/connection.interface.js';
+import { ConnectionStatus } from '../../../../services/upstreams/registry/connection-status.interface.js';
 
 registerEnumType(SetupState, {
   name: 'SetupState',
   description:
     'Whether the credentials of a connection are complete (REQ-CONN-044).',
+});
+
+registerEnumType(ConnectionStatus, {
+  name: 'ConnectionStatus',
+  description:
+    "The state of a connection's upstream client. OFF: no client is wanted (disabled, not READY, or an auth type without a client yet). FAILED: the last connect failed, until the next change to the connection.",
 });
 
 registerEnumType(AuthType, {

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CryptoModule } from '../../crypto/crypto.module.js';
+import { EventsModule } from '../../events/events.module.js';
 import { NetModule } from '../../net/net.module.js';
 import { PrismaModule } from '../../prisma/prisma.module.js';
 import { IconsModule } from '../icons/icons.module.js';
@@ -12,7 +13,7 @@ import { UpstreamRegistryService } from './registry/upstream-registry.service.js
 // Connections, the catalog and probing. No transport: the API modules
 // import this one and expose the services.
 @Module({
-  imports: [PrismaModule, CryptoModule, NetModule, IconsModule],
+  imports: [PrismaModule, CryptoModule, NetModule, EventsModule, IconsModule],
   providers: [
     ConnectionsService,
     CatalogService,
@@ -20,6 +21,11 @@ import { UpstreamRegistryService } from './registry/upstream-registry.service.js
     IconRefreshService,
     UpstreamRegistryService,
   ],
-  exports: [ConnectionsService, CatalogService, ProbeService],
+  exports: [
+    ConnectionsService,
+    CatalogService,
+    ProbeService,
+    UpstreamRegistryService,
+  ],
 })
 export class UpstreamsModule {}

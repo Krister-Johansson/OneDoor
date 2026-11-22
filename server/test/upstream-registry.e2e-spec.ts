@@ -102,12 +102,15 @@ describe('upstream registry (e2e)', () => {
   it('connects every enabled and READY connection after startup', async () => {
     await eventually(() => expect(registry.client(atStartupId)).toBeDefined());
     expect(await toolNames(atStartupId)).toEqual(['echo', 'reverse']);
+    expect(registry.status(atStartupId)).toBe('CONNECTED');
     expect(registry.client(disabledAtStartupId)).toBeUndefined();
+    expect(registry.status(disabledAtStartupId)).toBe('OFF');
   });
 
   it('leaves a connection without a client when its server cannot be reached', async () => {
     await registry.sync(deadAtStartupId);
     expect(registry.client(deadAtStartupId)).toBeUndefined();
+    expect(registry.status(deadAtStartupId)).toBe('FAILED');
   });
 
   it('closes the client when the connection is disabled, and connects again when it is enabled (REQ-CONN-051)', async () => {
@@ -118,6 +121,7 @@ describe('upstream registry (e2e)', () => {
     await eventually(() =>
       expect(registry.client(atStartupId)).toBeUndefined(),
     );
+    expect(registry.status(atStartupId)).toBe('OFF');
 
     await setEnabled(atStartupId, true);
     await eventually(() => expect(registry.client(atStartupId)).toBeDefined());
