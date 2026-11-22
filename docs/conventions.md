@@ -669,7 +669,8 @@ Approved 2026-11-22.
 - `onApplicationBootstrap` starts a sync for every enabled connection without `await`. `onModuleDestroy` aborts and closes every client.
 - `client(connectionId)` returns the connected client, or `undefined` while it connects, after a failed connect, and when the connection should have none.
 - Clients connect through `GuardedFetch` with a 10 second connect timeout. One `AbortController` per client stops all of its requests when the client closes.
-- A failed connect is logged with the connection id and a fixed reason, and leaves no client. The next sync tries again.
+- A failed connect is logged with the connection id and a fixed reason. It leaves no client and the status `FAILED`, and the next sync tries again.
+- `status(connectionId)` returns `OFF`, `CONNECTING`, `CONNECTED` or `FAILED` from memory. Each change publishes `CONNECTION_STATUS_CHANGED` with the connection id and owner id, from a background call that only logs a failure. A removed connection publishes nothing.
 - `UPSTREAM_CONNECTING` turns the registry off. `stubAppEnv()` and the web e2e setup set it to `false`.
 
 ### Following changes
@@ -686,6 +687,58 @@ this.registry.syncInBackground(id);
 ### Tests
 
 The registry test is `server/test/upstream-registry.e2e-spec.ts`. It sets `UPSTREAM_CONNECTING=true` and uses the open twin. It waits for a background change with `vi.waitFor` on `registry.client(id)`, and calls `await registry.sync(id)` where the test itself made the change.
+
+## Events and subscriptions
+
+Approved 2026-11-22.
+
+### EventBus
+
+`EventBus` in `server/src/events/` is the abstract class, bound by `EventsModule` on `EVENT_BUS` (only `redis` so far, which uses `REDIS_URL`). A service module that publishes or subscribes imports `EventsModule`. The API layer never injects `EventBus`: a service wraps the subscription it needs.
+
+A topic is a typed constant, defined next to the payload type in the service's `<name>.interface.ts`:
+
+```ts
+export interface ConnectionStatusChanged {
+  connectionId: string;
+  ownerId: string;
+}
+export const CONNECTION_STATUS_CHANGED = defineTopic<ConnectionStatusChanged>(
+  'connection-status-changed',
+);
+```
+
+- A payload is plain JSON with ids only. The subscriber loads the rows it sends.
+- `publish` is called from a background call that logs a failure, so no caller waits for Redis.
+- `subscribe(topic, filter)` resolves once the subscription is live and delivers only the events that pass `filter`. Scoping to an owner happens in that filter, inside the service: `statusChanges(ownerId)`.
+- Delivery is at most once, and the Redis channel is `onedoor:<topic>`. Each instance holds one Redis subscription per topic for all its subscribers.
+
+### GraphQL subscriptions
+
+`GraphqlApiModule` serves subscriptions over `graphql-ws` on `/graphql`. The context function puts the socket's upgrade request in `req`, so `CallerGuard` and `@CurrentCaller()` work as for queries.
+
+```ts
+@Subscription(() => ConnectionModel, {
+  description: "Sends one of the caller's connections each time its status changes.",
+  resolve(this: ConnectionsSubscription, event: ConnectionStatusChanged) {
+    return this.connectionsService.getForOwner(event.ownerId, event.connectionId);
+  },
+})
+connectionStatusChanged(@CurrentCaller() caller: Caller) {
+  return this.registry.statusChanges(caller.userId);
+}
+```
+
+- One class per feature in `<feature>.subscription.ts`. The method returns the service's iterator, and `resolve` loads the object with a service method.
+- A field that is computed and not stored, such as `Connection.status`, is a `@ResolveField` in `<name>.resolver.ts`.
+- Because `resolve` reads current state, a subscriber may see the same status twice or miss a short one in between. The last event it gets is current.
+- `isAllowedSocketOrigin` in `server/src/auth/socket-origin.ts` checks every socket in `onConnect`. A socket with an `Origin` header is accepted only from `localhost`, `127.0.0.1` or `[::1]`, and a socket without one is accepted.
+
+### Tests
+
+- `RedisEventBus` has a unit test against Redis in Testcontainers. It checks Redis subscriptions with `PUBSUB NUMSUB`.
+- A subscription e2e test starts Postgres and Redis, calls `app.listen(0, '127.0.0.1')`, and connects with `createClient` from `graphql-ws` and `WebSocket` from `ws`. Before it triggers an event, it waits until `PUBSUB NUMSUB onedoor:<topic>` shows the server's subscription, and it waits for the count to drop to 0 again before the next test subscribes.
+- Assert the last status for an id, not the exact order of statuses.
 
 ## Web GraphQL client
 

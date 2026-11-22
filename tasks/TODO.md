@@ -35,7 +35,7 @@ Spec: `specs/connections.md`.
 
 Needs spec: `specs/upstreams.md`. Needs fake upstream MCP servers in `server/test/twins/`, which are human-owned.
 
-- [ ] T17 Live connection status. `EventBus` abstract class with a Redis implementation, a status subscription over `graphql-ws`, and a live badge in web.
+- [ ] T17 Live connection status. `EventBus` abstract class with a Redis implementation, a status subscription over `graphql-ws`, and a live badge in web. The server part is merged (PR #47); the web badge is open.
 - [ ] T18 Tool sync. A BullMQ job when a connection becomes enabled and `READY`, and on tool-list change: list tools, diff by content hash, store the tools. Adds a "re-sync tools" action.
 - [ ] T19 Tool policy. An enabled flag per tool, set by the owner, with new tools enabled. MCP annotations are shown as labels and never enforced. Adds the tools screen per connection.
 - [ ] T20 Upstream auth with an API key. `UpstreamAuthProvider` abstract class with the `NONE` and `API_KEY` implementations. Human review: credential handling.
