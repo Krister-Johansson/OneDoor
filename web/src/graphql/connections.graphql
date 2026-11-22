@@ -26,3 +26,10 @@ mutation SetConnectionEnabled($id: ID!, $enabled: Boolean!) {
     enabled
   }
 }
+
+# Adds a custom server (REQ-CONN-020).
+mutation CreateConnection($input: CreateConnectionInput!) {
+  createConnection(input: $input) {
+    id
+  }
+}

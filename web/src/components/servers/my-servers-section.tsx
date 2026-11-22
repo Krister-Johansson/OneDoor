@@ -1,4 +1,5 @@
 import { ServerIcon } from "lucide-react"
+import { useState } from "react"
 import { Badge } from "#/components/ui/badge"
 import { Button } from "#/components/ui/button"
 import {
@@ -20,9 +21,11 @@ import {
 } from "#/components/ui/item"
 import { useConnections } from "#/hooks/use-connections"
 import { AUTH_TYPE_LABELS } from "#/lib/auth-type"
+import { AddServerDialog } from "./add-server-dialog"
 
 // The caller's custom servers, sorted by display name (REQ-CONN-080).
 export function MyServersSection() {
+  const [adding, setAdding] = useState(false)
   const custom = useConnections().filter(
     (connection) => connection.catalogEntryId === null,
   )
@@ -36,7 +39,9 @@ export function MyServersSection() {
         <h2 id="my-servers-heading" className="text-lg font-semibold">
           My servers
         </h2>
-        {custom.length > 0 && <Button disabled>Add server</Button>}
+        {custom.length > 0 && (
+          <Button onClick={() => setAdding(true)}>Add server</Button>
+        )}
       </div>
       {custom.length === 0 ? (
         <Empty className="border">
@@ -50,7 +55,7 @@ export function MyServersSection() {
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button disabled>Add server</Button>
+            <Button onClick={() => setAdding(true)}>Add server</Button>
           </EmptyContent>
         </Empty>
       ) : (
@@ -82,6 +87,7 @@ export function MyServersSection() {
           ))}
         </ItemGroup>
       )}
+      <AddServerDialog open={adding} onOpenChange={setAdding} />
     </section>
   )
 }

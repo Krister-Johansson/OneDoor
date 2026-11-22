@@ -16,3 +16,7 @@ export const AUTH_TYPE_HINTS: Record<AuthType, string> = {
   OAUTH_DCR: "You sign in with the provider. OneDoor registers itself.",
   OAUTH_MANUAL: "You sign in with the provider, with client details you enter.",
 }
+
+// The API key header the server uses when none is given (REQ-CONN-020).
+export const DEFAULT_HEADER_NAME = "Authorization"
+export const DEFAULT_HEADER_PREFIX = "Bearer"
