@@ -8,7 +8,7 @@ import { Query, Resolver } from '@nestjs/graphql';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { CallerService } from '../src/caller/caller.service.js';
+import { CallerService } from '../src/auth/caller.service.js';
 import {
   ConflictError,
   ForbiddenError,

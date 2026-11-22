@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { DEFAULT_USER_NAME } from '../src/caller/caller.js';
+import { DEFAULT_USER_NAME } from '../src/auth/caller.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import type { AuthType } from '../src/generated/prisma/enums.js';
 

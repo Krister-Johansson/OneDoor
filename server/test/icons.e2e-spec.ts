@@ -5,7 +5,7 @@ import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
-import { IconRefreshService } from '../src/upstreams/icon-refresh/icon-refresh.service.js';
+import { IconRefreshService } from '../src/services/upstreams/icon-refresh/icon-refresh.service.js';
 import { startMigratedPostgres } from './support/database.js';
 import { stubAppEnv } from './support/env.js';
 import {
