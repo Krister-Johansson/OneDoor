@@ -23,13 +23,51 @@ type Connection {
   """Whether the gateway uses it (REQ-CONN-051)."""
   enabled: Boolean!
 
+  """Whether an API key is stored. The key is never returned."""
+  hasApiKey: Boolean!
+
+  """
+  Whether an OAuth client secret is stored. The secret is never returned.
+  """
+  hasClientSecret: Boolean!
+
   """The header that carries the API key. Only for API_KEY."""
   headerName: String
 
   """Text before the API key in the header. Only for API_KEY."""
   headerPrefix: String
   id: ID!
+
+  """The OAuth client id of a custom OAUTH_MANUAL connection."""
+  oauthClientId: String
+  setupState: SetupState!
   updatedAt: DateTime!
+  url: String!
+}
+
+"""A custom server to add (REQ-CONN-020)."""
+input CreateConnectionInput {
+  """Required for API_KEY, and only for it. Write-only."""
+  apiKey: String
+  authType: AuthType!
+  description: String
+
+  """1 to 60 characters, unique per user ignoring case."""
+  displayName: String!
+
+  """Only for API_KEY. Defaults to Authorization."""
+  headerName: String
+
+  """Only for API_KEY. Defaults to Bearer. May be empty."""
+  headerPrefix: String
+
+  """Required for OAUTH_MANUAL, and only for it."""
+  oauthClientId: String
+
+  """Required for OAUTH_MANUAL, and only for it. Write-only."""
+  oauthClientSecret: String
+
+  """https, or http only for localhost and 127.0.0.1."""
   url: String!
 }
 
@@ -38,10 +76,54 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+type Mutation {
+  """Adds a custom server (REQ-CONN-020)."""
+  createConnection(input: CreateConnectionInput!): Connection!
+
+  """
+  Removes a connection with its credentials, and returns its id (REQ-CONN-052).
+  """
+  removeConnection(id: ID!): ID!
+
+  """Enables or disables a connection (REQ-CONN-051)."""
+  setConnectionEnabled(enabled: Boolean!, id: ID!): Connection!
+
+  """Changes a custom server (REQ-CONN-023, REQ-CONN-042)."""
+  updateConnection(id: ID!, input: UpdateConnectionInput!): Connection!
+}
+
 type Query {
   """One of the caller's connections. NOT_FOUND otherwise."""
   connection(id: ID!): Connection!
 
   """The caller's connections, sorted by display name."""
   connections: [Connection!]!
+}
+
+"""Whether the credentials of a connection are complete (REQ-CONN-044)."""
+enum SetupState {
+  NEEDS_CREDENTIALS
+  READY
+}
+
+"""
+Changes to a custom server. A field left out keeps its value. Changing the url or authType deletes the stored credentials unless the same input sets new ones (REQ-CONN-023).
+"""
+input UpdateConnectionInput {
+  """Left out keeps the stored key, null deletes it, a string replaces it."""
+  apiKey: String
+  authType: AuthType
+
+  """null clears the description."""
+  description: String
+  displayName: String
+  headerName: String
+  headerPrefix: String
+  oauthClientId: String
+
+  """
+  Left out keeps the stored secret, null deletes it, a string replaces it.
+  """
+  oauthClientSecret: String
+  url: String
 }
