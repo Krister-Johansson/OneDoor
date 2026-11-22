@@ -166,6 +166,9 @@ model Tool {
   /// SHA-256 of the canonical JSON of name, title, description, the schemas
   /// and the annotations. A sync rewrites a tool only when this changes.
   contentHash  String     @map("content_hash")
+  /// Set by the owner (T19). A new tool is enabled; a sync keeps the flag.
+  /// The gateway does not search or execute a disabled tool.
+  enabled      Boolean    @default(true)
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 

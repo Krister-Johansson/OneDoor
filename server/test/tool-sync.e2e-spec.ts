@@ -178,6 +178,7 @@ describe('tool sync (e2e)', () => {
       description: 'The echo tool of open-twin.',
       contentHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       inputSchema: expect.objectContaining({ type: 'object' }),
+      enabled: true,
     });
 
     const body = await graphql(
@@ -260,6 +261,37 @@ describe('tool sync (e2e)', () => {
     expect(echoAfter?.updatedAt).toEqual(echo.updatedAt);
     expect(reverseAfter?.id).toBe(reverse.id);
     expect(reverseAfter?.contentHash).toBe(reverse.contentHash);
+  });
+
+  it('keeps the enabled flag when a sync rewrites a tool (T19)', async () => {
+    await eventually(async () =>
+      expect(await toolsOf(syncedId)).toHaveLength(2),
+    );
+    const [echo] = await toolsOf(syncedId);
+    if (!echo) throw new Error('The tools were not synced');
+    const off = await graphql(
+      'mutation ($id: ID!) { setToolEnabled(id: $id, enabled: false) { enabled } }',
+      { id: echo.id },
+    );
+    expect(off.errors).toBeUndefined();
+    // A stale hash makes the sync rewrite the row.
+    await prisma.tool.update({
+      where: { id: echo.id },
+      data: { description: 'stale', contentHash: 'stale' },
+    });
+
+    expect((await resync(syncedId)).errors).toBeUndefined();
+    await eventually(async () => {
+      const [synced] = await toolsOf(syncedId);
+      expect(synced?.description).toBe('The echo tool of open-twin.');
+    });
+    const [after] = await toolsOf(syncedId);
+    expect(after).toMatchObject({ id: echo.id, enabled: false });
+
+    await graphql(
+      'mutation ($id: ID!) { setToolEnabled(id: $id, enabled: true) { enabled } }',
+      { id: echo.id },
+    );
   });
 
   it('refuses a re-sync while the connection is not connected', async () => {
