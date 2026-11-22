@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { AuthType } from '../../../../generated/prisma/enums.js';
 import {
   type Connection,
@@ -89,6 +89,12 @@ export class ConnectionModel implements Connection {
 
   @Field({ description: 'Whether the gateway uses it (REQ-CONN-051).' })
   enabled: boolean;
+
+  @Field(() => Int, {
+    description:
+      'How many tools the last tool sync stored. A failed sync and a disabled connection keep them.',
+  })
+  toolCount: number;
 
   @Field()
   createdAt: Date;

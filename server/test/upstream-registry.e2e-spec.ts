@@ -2,6 +2,10 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaPg } from '@prisma/adapter-pg';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import {
+  RedisContainer,
+  type StartedRedisContainer,
+} from '@testcontainers/redis';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { seed } from '../prisma/seed.js';
@@ -11,6 +15,9 @@ import { startMigratedPostgres } from './support/database.js';
 import { stubAppEnv } from './support/env.js';
 import { startOpenTwin, type Twin } from './twins/mcp-twins.js';
 
+// The same image as docker-compose.yml.
+const REDIS_IMAGE = 'redis:8.8.4-alpine';
+
 // Nothing listens on port 1, so a connect there fails at once.
 const DEAD_URL = 'http://127.0.0.1:1/mcp';
 
@@ -18,6 +25,8 @@ describe('upstream registry (e2e)', () => {
   let postgres: StartedPostgreSqlContainer;
   let prisma: PrismaClient;
   let twin: Twin;
+  // Status events and tool syncs go through Redis.
+  let redis: StartedRedisContainer;
   let app: INestApplication<App>;
   let registry: UpstreamRegistryService;
   let meId: string;
@@ -66,8 +75,9 @@ describe('upstream registry (e2e)', () => {
   }
 
   beforeAll(async () => {
-    [postgres, twin] = await Promise.all([
+    [postgres, redis, twin] = await Promise.all([
       startMigratedPostgres(),
+      new RedisContainer(REDIS_IMAGE).start(),
       startOpenTwin(),
     ]);
     prisma = new PrismaClient({
@@ -81,7 +91,10 @@ describe('upstream registry (e2e)', () => {
     ).id;
     deadAtStartupId = (await addConnection('Dead at startup', DEAD_URL)).id;
 
-    stubAppEnv({ DATABASE_URL: postgres.getConnectionUri() });
+    stubAppEnv({
+      DATABASE_URL: postgres.getConnectionUri(),
+      REDIS_URL: redis.getConnectionUrl(),
+    });
     vi.stubEnv('UPSTREAM_CONNECTING', 'true');
     const { AppModule } = await import('../src/app.module.js');
     const moduleRef = await Test.createTestingModule({
@@ -95,7 +108,7 @@ describe('upstream registry (e2e)', () => {
   afterAll(async () => {
     if (!closed) await app?.close();
     await prisma?.$disconnect();
-    await Promise.allSettled([twin?.close(), postgres?.stop()]);
+    await Promise.allSettled([twin?.close(), redis?.stop(), postgres?.stop()]);
     vi.unstubAllEnvs();
   });
 
