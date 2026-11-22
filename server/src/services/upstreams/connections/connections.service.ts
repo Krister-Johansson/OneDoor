@@ -11,6 +11,7 @@ import { AuthType } from '../../../generated/prisma/enums.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { toDomainError } from '../../../prisma/prisma-error.mapper.js';
 import { IconRefreshService } from '../icon-refresh/icon-refresh.service.js';
+import { UpstreamRegistryService } from '../registry/upstream-registry.service.js';
 import type {
   Connection,
   CreateConnectionData,
@@ -46,6 +47,7 @@ export class ConnectionsService {
     private readonly prisma: PrismaService,
     private readonly secretStore: SecretStore,
     private readonly iconRefresh: IconRefreshService,
+    private readonly registry: UpstreamRegistryService,
   ) {}
 
   // The owner's connections, sorted by display name, ignoring case.
@@ -124,6 +126,7 @@ export class ConnectionsService {
         });
       });
       this.iconRefresh.refreshConnectionInBackground(row.id, input.url);
+      this.registry.syncInBackground(row.id);
       return toConnection(row);
     } catch (error) {
       throw toDomainError(error, 'Connection');
@@ -200,6 +203,7 @@ export class ConnectionsService {
       if (urlChanged && input.url !== undefined) {
         this.iconRefresh.refreshConnectionInBackground(row.id, input.url);
       }
+      this.registry.syncInBackground(row.id);
       return toConnection(updated);
     } catch (error) {
       throw toDomainError(error, 'Connection');
@@ -219,6 +223,7 @@ export class ConnectionsService {
         data: { enabled },
         include: CONNECTION_INCLUDE,
       });
+      this.registry.syncInBackground(row.id);
       return toConnection(row);
     } catch (error) {
       throw toDomainError(error, 'Connection');
@@ -230,6 +235,7 @@ export class ConnectionsService {
     assertUuid(id);
     try {
       await this.prisma.connection.delete({ where: { id, ownerId } });
+      this.registry.syncInBackground(id);
       return id;
     } catch (error) {
       throw toDomainError(error, 'Connection');
@@ -264,6 +270,7 @@ export class ConnectionsService {
         },
         include: CONNECTION_INCLUDE,
       });
+      this.registry.syncInBackground(row.id);
       return toConnection(updated);
     } catch (error) {
       throw toDomainError(error, 'Connection');

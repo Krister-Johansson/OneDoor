@@ -46,8 +46,10 @@ export default async function globalSetup() {
     SECRET_STORE: "aes-256-gcm",
     SECRET_STORE_KEY_ID: "e2e-1",
     SECRET_STORE_KEY: randomBytes(32).toString("base64"),
-    // Icon fetching would reach the catalog servers on the internet.
+    // Icon fetching and upstream clients would reach the catalog servers on
+    // the internet.
     ICON_FETCHING: "false",
+    UPSTREAM_CONNECTING: "false",
   }
   await run(
     "pnpm",

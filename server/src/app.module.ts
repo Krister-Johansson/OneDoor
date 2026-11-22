@@ -12,6 +12,7 @@ import { databaseConfig } from './config/database.config.js';
 import { envSchema } from './config/env.schema.js';
 import { iconsConfig } from './config/icons.config.js';
 import { redisConfig } from './config/redis.config.js';
+import { upstreamsConfig } from './config/upstreams.config.js';
 import { DomainErrorFilter } from './errors/domain-error.filter.js';
 import { createValidationPipe } from './errors/validation-pipe.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -21,7 +22,14 @@ import { PrismaModule } from './prisma/prisma.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: envSchema,
-      load: [appConfig, cryptoConfig, databaseConfig, iconsConfig, redisConfig],
+      load: [
+        appConfig,
+        cryptoConfig,
+        databaseConfig,
+        iconsConfig,
+        redisConfig,
+        upstreamsConfig,
+      ],
     }),
     PrismaModule,
     CallerModule,

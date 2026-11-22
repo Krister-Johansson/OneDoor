@@ -14,11 +14,15 @@ import {
   CONNECTION_INCLUDE,
   toConnection,
 } from '../connections/connection.mapper.js';
+import { UpstreamRegistryService } from '../registry/upstream-registry.service.js';
 import type { CatalogEntry } from './catalog-entry.interface.js';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly registry: UpstreamRegistryService,
+  ) {}
 
   // REQ-CONN-011: every entry, sorted by display name, with its auth options
   // and the owner's connection for it.
@@ -101,6 +105,7 @@ export class CatalogService {
           data: { ownerId, catalogEntryId, catalogAuthOptionId: option.id },
           include: CONNECTION_INCLUDE,
         });
+        this.registry.syncInBackground(created.id);
         return toConnection(created);
       }
 
@@ -117,6 +122,7 @@ export class CatalogService {
             },
         include: CONNECTION_INCLUDE,
       });
+      this.registry.syncInBackground(updated.id);
       return toConnection(updated);
     } catch (error) {
       throw toDomainError(error, 'Connection');
