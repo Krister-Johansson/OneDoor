@@ -1,12 +1,12 @@
-import { InternalError } from '../errors/domain-errors.js';
+import { InternalError } from '../../errors/domain-errors.js';
 import type {
   CatalogAuthOption,
   CatalogEntry,
   Connection,
-} from '../generated/prisma/client.js';
-import { AuthType } from '../generated/prisma/enums.js';
-import { iconPath } from '../icons/icons.service.js';
-import { type ConnectionModel, SetupState } from './connection.model.js';
+} from '../../generated/prisma/client.js';
+import { AuthType } from '../../generated/prisma/enums.js';
+import { iconPath } from '../../icons/icons.service.js';
+import { type ConnectionModel, SetupState } from './models/connection.model.js';
 
 // Every query that maps to ConnectionModel loads these relations.
 export const CONNECTION_INCLUDE = {

@@ -1,5 +1,5 @@
 import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { AuthType } from '../generated/prisma/enums.js';
+import { AuthType } from '../../../generated/prisma/enums.js';
 
 // REQ-CONN-044. OAuth tokens are not stored yet, so OAuth connections stay
 // NEEDS_CREDENTIALS until the OAuth flows exist.

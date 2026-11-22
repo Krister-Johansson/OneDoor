@@ -8,21 +8,23 @@ import {
   UnauthorizedError,
 } from '@modelcontextprotocol/client';
 import { Injectable } from '@nestjs/common';
-import { ValidationError } from '../errors/domain-errors.js';
-import { AuthType } from '../generated/prisma/enums.js';
-import { findNetworkRuleError, GuardedFetch } from '../net/guarded-fetch.js';
-import { fetchUrlProblem } from '../net/url-policy.js';
+import { ValidationError } from '../../errors/domain-errors.js';
+import { AuthType } from '../../generated/prisma/enums.js';
+import { findNetworkRuleError, GuardedFetch } from '../../net/guarded-fetch.js';
+import { fetchUrlProblem } from '../../net/url-policy.js';
 import {
   DEFAULT_HEADER_NAME,
   DEFAULT_HEADER_PREFIX,
-} from './connection-rules.js';
-import type { CheckCredentialsInput } from './probe.input.js';
+} from '../connections/connection-rules.js';
+import type { CheckCredentialsInput } from './inputs/check-credentials.input.js';
 import {
   type CredentialsCheckModel,
   CredentialsStatus,
+} from './models/credentials-check.model.js';
+import {
   type ProbeResultModel,
   ProbeStatus,
-} from './probe.model.js';
+} from './models/probe-result.model.js';
 
 export const PROBE_TIMEOUT_MS = 10_000;
 const CLIENT_INFO = { name: 'onedoor', version: '0.0.1' };

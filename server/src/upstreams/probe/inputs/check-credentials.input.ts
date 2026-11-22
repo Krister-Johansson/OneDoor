@@ -1,11 +1,11 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
-import { AuthType } from '../generated/prisma/enums.js';
+import { AuthType } from '../../../generated/prisma/enums.js';
 import {
   HasNoControlCharacters,
   IsHeaderName,
   IsServerUrl,
-} from './connection-rules.js';
+} from '../../connections/connection-rules.js';
 
 @InputType({
   description:

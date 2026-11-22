@@ -1,5 +1,10 @@
-import { registerDecorator, type ValidationOptions } from 'class-validator';
-import { fetchUrlProblem } from '../net/url-policy.js';
+import { Transform } from 'class-transformer';
+import {
+  registerDecorator,
+  ValidateIf,
+  type ValidationOptions,
+} from 'class-validator';
+import { fetchUrlProblem } from '../../net/url-policy.js';
 
 // Field rules for connections (specs/connections.md). The functions return
 // the problem as text, or null when the value is fine. Messages never repeat
@@ -83,3 +88,13 @@ export const HasNoControlCharacters = (options?: ValidationOptions) =>
         : null,
     options,
   );
+
+// Trims a string before validation.
+export const Trim = () =>
+  Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  );
+
+// Validates a field that may be left out but not set to null.
+export const IfGiven = () =>
+  ValidateIf((_object, value) => value !== undefined);
