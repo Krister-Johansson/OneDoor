@@ -28,7 +28,7 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 
 Spec: `specs/connections.md`.
 
-- [ ] T15 Add and edit dialogs. The add dialog with probe pre-fill and the credentials check, the edit form with write-only secret fields that show "Set" or "Not set", and remove with confirmation. Covers REQ-CONN-081 and 082.
+- [ ] T15 Catalog switch and server dialogs. The catalog switch: switching on calls `switchOnCatalogEntry` and asks which auth option to use when an entry offers more than one, and switching off calls `setConnectionEnabled` (REQ-CONN-080). The add dialog with probe pre-fill and the credentials check, the edit form with write-only secret fields that show "Set" or "Not set", and remove with confirmation. Covers REQ-CONN-081 and 082. Checkpoint: first mutation hook, first dialog.
 
 ## Upstream servers
 
