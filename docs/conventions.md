@@ -497,6 +497,24 @@ pnpm exec nest g class api/graphql/connections/connections.mutation --flat --no-
 
 Register an enum for GraphQL with `registerEnumType` in the model file that uses it: a Prisma enum, or an `as const` enum from a service type file.
 
+### Lists on another feature's type
+
+Approved 2026-11-23. A list that belongs to an object of another feature is a `@ResolveField` on that object's resolver, and the list's own type lives in its feature folder. `Connection.tools` is in `connections/connection.resolver.ts` and returns `ToolModel` from `tools/models/`. The parent was loaded for its owner, so the field reads by the parent's id with no owner check of its own. A mutation on one item of the list checks the owner itself: `setToolEnabled` updates `where: { id, ownerId }` and gives `NOT_FOUND` for another owner's tool.
+
+### Untrusted stored JSON
+
+Approved 2026-11-23. JSON that an upstream server sent, such as tool annotations, never reaches GraphQL as a JSON scalar. The mapper reads only the known fields of the expected type into a service type, and anything else is dropped:
+
+```ts
+// tool.mapper.ts
+for (const hint of HINTS) {
+  const value = source[hint];
+  if (typeof value === 'boolean') annotations[hint] = value;
+}
+```
+
+The GraphQL type (`ToolAnnotations`) has one nullable field per known value, null when the server did not send it in the expected type. The mapper has a unit test with values of the wrong type and keys that are not known.
+
 ### The caller
 
 `CallerModule` registers `CallerGuard` as `APP_GUARD`. It attaches the caller to every GraphQL request; plain HTTP routes pass through. Every resolver method that reads or writes owned data takes `@CurrentCaller() caller: Caller` and passes `caller.userId` to the service:
