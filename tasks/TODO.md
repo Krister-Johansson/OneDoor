@@ -17,13 +17,13 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T06 User, catalog and connection models. `User`, `CatalogEntry` and `Connection` with citext display names and three check constraints, migration `20261121233730_connections`, and the seed for `me`.
 - [x] T07 GraphQL setup and the `connections` query. Apollo code-first, `server/schema.gql` with a drift test, `CallerGuard` attaching `me`, `connections` and `connection(id)` filtered by owner, and GraphQL error codes from `DomainErrorFilter`.
 - [x] T08 Secret storage. `SecretStore` with `AesGcmSecretStore` (AES-256-GCM, context as associated data), the `crypto` config namespace, and the factory binding in `CryptoModule`.
+- [x] T09 Custom connections. `createConnection`, `updateConnection`, `setConnectionEnabled` and `removeConnection`, class-validator inputs with a global `ValidationPipe`, and API keys and client secrets encrypted with `SecretStore` (migration `20261122000306_connection_secrets`).
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T09 Custom connections. `createConnection`, `updateConnection`, `setConnectionEnabled` and `removeConnection`, with `connection.input.ts` validated by `class-validator`. Secrets are encrypted with `SecretStore`, and GraphQL returns only `hasApiKey` and `hasClientSecret`. Covers REQ-CONN-020 to 023, 040 to 044, 051 and 052. Checkpoint: first GraphQL input and mutation. Human review: credential storage.
-- [ ] T10 Catalog. Seed entries for GitHub, Context7 and Azure DevOps once their values are confirmed (see the spec's open questions), OAuth client details for catalog entries from config, the `catalog` query and `switchOnCatalogEntry`. Covers REQ-CONN-010 to 012. Human review: credential handling.
+- [ ] T10 Catalog. Seed entries for GitHub, Context7 and Azure DevOps once their values are confirmed (see the spec's open questions), OAuth client details for catalog entries from config, the `catalog` query, `switchOnCatalogEntry`, and setting the API key of a catalog-based connection. Covers REQ-CONN-010 to 012. Human review: credential handling.
 - [ ] T11 Probe and credentials check. `probeServer` and `checkCredentials`, with the network rules for fetching. Covers REQ-CONN-060 to 063. Human review: fetching user-supplied URLs.
 - [ ] T12 Server icons. MCP `icons`, then the favicon, then a generated letter icon; stored and served from our origin. Covers REQ-CONN-070 and 071. Human review: fetching upstream URLs.
 - [ ] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql`, a `codegen` script, and a codegen drift check in web `verify`. Checkpoint: codegen setup.

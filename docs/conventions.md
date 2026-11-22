@@ -498,3 +498,40 @@ The config schema lists the allowed values with `z.enum([...])` and a default, s
 ### Required variables in e2e tests
 
 An e2e test that boots `AppModule` calls `stubAppEnv()` from `server/test/support/env.ts` before importing it, passing the URLs of the services it started. A new required variable gets a test value in `stubAppEnv()`.
+
+## GraphQL inputs and mutations
+
+Approved 2026-11-22.
+
+### Validation
+
+`AppModule` registers `createValidationPipe()` from `server/src/errors/validation-pipe.ts` as `APP_PIPE`. It transforms inputs into their classes, rejects undeclared fields, and turns failures into a domain `ValidationError`, so clients get `extensions.code: VALIDATION`. Its messages name the field and the rule, never the value.
+
+### Input classes
+
+`<name>.input.ts` holds `Create<Name>Input` and `Update<Name>Input`, both `@InputType` with a `description`. Every field has `@Field` and class-validator decorators:
+
+- A required string: `@IsString()` and a length rule. Trim names with `@Transform(trim)`.
+- An optional field that may be null: `@IsOptional()`.
+- An update field that may be left out but not set to null: `ValidateIf((_o, v) => v !== undefined)` before the rules.
+- A rule that needs code lives in `<name>-rules.ts` as a function that returns the problem as text, or null, plus a decorator made with `registerDecorator`. The message never repeats the value. Test the functions in `<name>-rules.spec.ts`.
+
+Rules that compare fields (one field required when another has a value) live in the service and throw `ValidationError`.
+
+### Update semantics
+
+In an update input, a field left out keeps its value. For a nullable field, `null` clears it. A secret field follows the same rule: left out keeps, `null` deletes, a string replaces.
+
+### Mutations
+
+- One resolver method per mutation, with a `description` that names the requirement. It takes `@CurrentCaller()` and delegates.
+- A mutation returns the changed object. A removal returns the removed id as `ID`.
+- The service writes with `where: { id, ownerId }`, so another owner's row is a Prisma P2025 and becomes `NOT_FOUND`. Check that the id is a UUID first.
+- Keep transactions to database work and local computation such as encryption. Never call another system inside one.
+
+### Secrets in a row
+
+- A secret column pair is `<field>Ciphertext` and `<field>KeyId`, with a check constraint that both are set or both are null.
+- Encrypt with the context `<table>:<row id>:<field>`. A new row is inserted first without its secrets, then updated with them, inside one transaction.
+- GraphQL exposes `has<Field>: Boolean!`, never the value.
+- The e2e test checks every response for the secret's plaintext, and that the stored ciphertext decrypts only with its own row's context.
