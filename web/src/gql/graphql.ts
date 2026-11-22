@@ -63,6 +63,22 @@ export type ProbeStatus =
 /** Whether the credentials of a connection are complete (REQ-CONN-044). */
 export type SetupState = "NEEDS_CREDENTIALS" | "READY"
 
+/** Changes to a custom server. A field left out keeps its value. Changing the url or authType deletes the stored credentials unless the same input sets new ones (REQ-CONN-023). */
+export type UpdateConnectionInput = {
+  /** Left out keeps the stored key, null deletes it, a string replaces it. */
+  apiKey?: string | null | undefined
+  authType?: AuthType | null | undefined
+  /** null clears the description. */
+  description?: string | null | undefined
+  displayName?: string | null | undefined
+  headerName?: string | null | undefined
+  headerPrefix?: string | null | undefined
+  oauthClientId?: string | null | undefined
+  /** Left out keeps the stored secret, null deletes it, a string replaces it. */
+  oauthClientSecret?: string | null | undefined
+  url?: string | null | undefined
+}
+
 export type CatalogQueryVariables = Exact<{ [key: string]: never }>
 
 export type CatalogQuery = {
@@ -142,6 +158,37 @@ export type CreateConnectionMutationVariables = Exact<{
 export type CreateConnectionMutation = {
   createConnection: { __typename: "Connection"; id: string }
 }
+
+export type UpdateConnectionMutationVariables = Exact<{
+  id: string | number
+  input: UpdateConnectionInput
+}>
+
+export type UpdateConnectionMutation = {
+  updateConnection: {
+    __typename: "Connection"
+    id: string
+    catalogEntryId: string | null
+    displayName: string
+    description: string
+    url: string
+    authType: AuthType
+    headerName: string | null
+    headerPrefix: string | null
+    hasApiKey: boolean
+    oauthClientId: string | null
+    hasClientSecret: boolean
+    setupState: SetupState
+    iconUrl: string
+    enabled: boolean
+  }
+}
+
+export type RemoveConnectionMutationVariables = Exact<{
+  id: string | number
+}>
+
+export type RemoveConnectionMutation = { removeConnection: string }
 
 export type ProbeServerMutationVariables = Exact<{
   url: string
@@ -489,6 +536,143 @@ export const CreateConnectionDocument = {
 } as unknown as DocumentNode<
   CreateConnectionMutation,
   CreateConnectionMutationVariables
+>
+export const UpdateConnectionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "UpdateConnection" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "ID" } },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "input" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "UpdateConnectionInput" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "updateConnection" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "input" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "input" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "catalogEntryId" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "displayName" } },
+                { kind: "Field", name: { kind: "Name", value: "description" } },
+                { kind: "Field", name: { kind: "Name", value: "url" } },
+                { kind: "Field", name: { kind: "Name", value: "authType" } },
+                { kind: "Field", name: { kind: "Name", value: "headerName" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "headerPrefix" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "hasApiKey" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "oauthClientId" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "hasClientSecret" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "setupState" } },
+                { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
+                { kind: "Field", name: { kind: "Name", value: "enabled" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  UpdateConnectionMutation,
+  UpdateConnectionMutationVariables
+>
+export const RemoveConnectionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "RemoveConnection" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "ID" } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "removeConnection" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  RemoveConnectionMutation,
+  RemoveConnectionMutationVariables
 >
 export const ProbeServerDocument = {
   kind: "Document",
