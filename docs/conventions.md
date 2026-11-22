@@ -570,3 +570,29 @@ Give every outgoing call a deadline with `AbortSignal.timeout(...)`, combined wi
 - A twin is a `start<Name>Twin()` function that listens on 127.0.0.1 on a free port and returns `{ url, origin, close }`. MCP twins serve Streamable HTTP statelessly with `@modelcontextprotocol/server` and `@modelcontextprotocol/node`.
 - Tests of the network rules construct `GuardedFetch` with a fake resolver (`ResolveAll`), so no test depends on real DNS or reaches the internet.
 - A test that sends a secret asserts that no response contains it.
+
+## Background work and served files
+
+Approved 2026-11-22.
+
+### Work that reaches other hosts
+
+A request never waits for another host when the result can arrive later. Start the work from the service with a `...InBackground` method that catches and logs its own errors, and return at once:
+
+```ts
+refreshConnectionInBackground(connectionId: string, url: string): void {
+  if (!this.icons.fetching) return;
+  this.refreshConnection(connectionId, url).catch((error: unknown) =>
+    this.logger.warn(`Icon refresh failed for connection ${connectionId}: ${String(error)}`),
+  );
+}
+```
+
+- When the work writes its result back, the write checks that its input is still current, for example `updateMany({ where: { id, url } })`, so a slow run cannot overwrite a newer one.
+- Work at startup runs from `onApplicationBootstrap` without `await`, so startup does not block.
+- A config switch turns off work that reaches the network. `stubAppEnv()` turns it off, and the test of that feature turns it back on. `ICON_FETCHING` is the first.
+- This holds until the job queue exists; queued work then moves to BullMQ.
+
+### Files served from OneDoor's own origin
+
+Content that came from another host, such as icons, is stored and served by OneDoor, never linked. A route that serves it sets `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, and takes the content type from what OneDoor detected in the bytes.
