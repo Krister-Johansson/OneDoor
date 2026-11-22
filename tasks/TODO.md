@@ -24,12 +24,11 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql` into `src/gql/graphql.ts`, the `codegen` script and its drift check in web `verify`, and the Nitro proxy for `/graphql` and `/icons`.
 - [x] T14 Servers screen. `/servers` with the catalog cards and "My servers" (REQ-CONN-080), `useCatalog()` and `useConnections()` read from queries the route loader preloads, and the first shadcn components. The catalog switch and the add, edit and remove actions are disabled until mutations exist.
 - [x] T15 Catalog switch and server dialogs. The catalog switch with the auth option choice, the add dialog with probe pre-fill and the credentials check (TanStack Form), the edit form with write-only secrets, and remove with confirmation (REQ-CONN-080 to 082).
+- [x] T15b Web end-to-end tests. Playwright with `pnpm e2e` (not part of `verify`), global setup with containers, a web twin, the built server and web app, and flows for adding a server and the catalog switch.
 
 ## Connections
 
 Spec: `specs/connections.md`.
-
-- [ ] T15b Web end-to-end tests. Playwright with `pnpm e2e` (not part of `verify`): global setup starts Postgres and Redis containers, a fake upstream MCP server in `web/e2e/twins/`, the server and the built web app. Flows: add a server through the dialog, and the catalog switch. Checkpoint: first Playwright flow.
 
 ## Upstream servers
 

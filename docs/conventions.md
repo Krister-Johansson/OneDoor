@@ -784,3 +784,32 @@ Forms use TanStack Form (`@tanstack/react-form`) with shadcn's `Field` component
 - Add components with `pnpm dlx shadcn@latest add <component> --yes`. They are committed in `src/components/ui/` and may be edited. When the CLI asks to overwrite an existing component, answer no (`printf 'n\n' | pnpm dlx shadcn@latest add ...`).
 - An edit to a generated component carries a comment that says why. `ItemGroup` in `item.tsx` renders a `<ul>` for Biome's `useSemanticElements` rule, and items in it use `render={<li />}`.
 - Icons from the server are rendered with `<img src={iconUrl} alt="">`, never inlined.
+
+## Web end-to-end tests
+
+Approved 2026-11-22.
+
+### Running
+
+`pnpm e2e` in `web` runs Playwright. It needs Docker and free ports 3100 and 3101, and it is not part of `pnpm verify`. A PR that changes a web screen reports both results.
+
+### Setup
+
+`web/e2e/global-setup.ts` starts everything once and returns the teardown:
+
+- Postgres and Redis containers from the Compose images, and the fake upstream servers in `web/e2e/twins/`.
+- The server, run from `../server` as processes: `prisma migrate deploy`, `prisma db seed`, `tsc -p tsconfig.build.json --outDir .e2e-build`, then `node .e2e-build/main.js` on port 3100 with `ICON_FETCHING=false` and a random `SECRET_STORE_KEY`. web never imports server code.
+- The web app, built with `API_URL` set to the server and run from `.output` on port 3101.
+- Process output goes to `web/test-results/api.log` and `web.log`.
+
+Values the flows need, such as a twin's URL, go through `process.env` (`E2E_TWIN_URL`).
+
+### Flows
+
+- Flows are `web/e2e/<screen>.e2e.ts`. The name keeps Vitest from running them.
+- Test titles name the requirements they cover.
+- Flows share one database and run one at a time, in file order. A flow does not depend on another flow's data, except that the first flow on a screen may assert its empty state.
+- Find elements by role and accessible name (`getByRole("switch", { name: "Use GitHub" })`) or by label, not by CSS classes.
+- A twin in `web/e2e/twins/` is a small fake MCP server on 127.0.0.1 with a free port. Twins do not reach the network.
+- After adding a flow, break the behaviour it covers once and see it fail.
+
