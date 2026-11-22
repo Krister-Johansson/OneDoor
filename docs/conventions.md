@@ -445,3 +445,56 @@ The service filters by owner in the Prisma query. A row of another owner, an unk
 ### Tests
 
 A resolver test is an e2e test: it starts a migrated Postgres, seeds it, writes rows with its own `PrismaClient`, boots `AppModule`, and posts queries to `/graphql` with `supertest`. It asserts `errors[0].extensions.code` for failures. A test with no database overrides `CallerService` with `{ getDefaultCaller: async () => ({ userId: 'test' }) }`.
+
+## Interfaces and provider bindings
+
+Approved 2026-11-22.
+
+### Shape
+
+Each replaceable part (server/AGENTS.md, Interfaces) is an abstract class in its module folder. The abstract class is the injection token, and feature code imports only it.
+
+```text
+server/src/crypto/
+├── secret-store.ts            abstract class SecretStore, plus the types it uses
+├── aes-gcm-secret-store.ts    class AesGcmSecretStore extends SecretStore
+└── crypto.module.ts           the factory provider
+```
+
+- The abstract class has an `abstract readonly id` (or `version`) for logs, and a comment on each method that says what it guarantees, including what it throws.
+- Methods that may call out to another system later are `async`, even when the first implementation is synchronous.
+- An implementation takes plain values in its constructor, not config objects or Nest tokens, so a unit test can build it with `new`.
+- Generate the module and classes with the Nest CLI (`nest g module`, `nest g class <module>/<name> --flat --no-spec`), then fill them in.
+
+### Binding
+
+The module binds the abstract class with a factory provider that reads the area's config namespace. A config value with one enum member per implementation selects it:
+
+```ts
+{
+  provide: SecretStore,
+  inject: [cryptoConfig.KEY],
+  useFactory: (crypto: ConfigType<typeof cryptoConfig>): SecretStore => {
+    switch (crypto.secretStore) {
+      case 'aes-256-gcm':
+        return new AesGcmSecretStore(crypto.key, crypto.keyId);
+    }
+  },
+}
+```
+
+The config schema lists the allowed values with `z.enum([...])` and a default, so an unknown value stops the boot. The module exports only the abstract class.
+
+### Tests
+
+- The implementation has a unit test that builds it with `new`.
+- The module has a test that compiles it with `ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true, load: [<area>Config] })` and checks that the abstract class resolves to the configured implementation.
+
+### Secrets
+
+- Feature code encrypts with `secretStore.encrypt(plaintext, context)` and stores both `ciphertext` and `keyId`. `context` names where the value is stored: `<table>:<row id>:<field>`, for example `connection:<id>:api_key`.
+- `SECRET_STORE_KEY` is 32 random bytes in base64 (`openssl rand -base64 32`). Changing it makes every stored secret unreadable.
+
+### Required variables in e2e tests
+
+An e2e test that boots `AppModule` calls `stubAppEnv()` from `server/test/support/env.ts` before importing it, passing the URLs of the services it started. A new required variable gets a test value in `stubAppEnv()`.
