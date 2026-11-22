@@ -8,12 +8,14 @@ import { appConfig } from './config/app.config.js';
 import { cryptoConfig } from './config/crypto.config.js';
 import { databaseConfig } from './config/database.config.js';
 import { envSchema } from './config/env.schema.js';
+import { iconsConfig } from './config/icons.config.js';
 import { redisConfig } from './config/redis.config.js';
 import { CryptoModule } from './crypto/crypto.module.js';
 import { DomainErrorFilter } from './errors/domain-error.filter.js';
 import { createValidationPipe } from './errors/validation-pipe.js';
 import { GraphqlApiModule } from './graphql-api/graphql-api.module.js';
 import { HealthModule } from './health/health.module.js';
+import { IconsModule } from './icons/icons.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UpstreamsModule } from './upstreams/upstreams.module.js';
 
@@ -22,7 +24,7 @@ import { UpstreamsModule } from './upstreams/upstreams.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: envSchema,
-      load: [appConfig, cryptoConfig, databaseConfig, redisConfig],
+      load: [appConfig, cryptoConfig, databaseConfig, iconsConfig, redisConfig],
     }),
     PrismaModule,
     HealthModule,
@@ -30,6 +32,7 @@ import { UpstreamsModule } from './upstreams/upstreams.module.js';
     UpstreamsModule,
     CallerModule,
     CryptoModule,
+    IconsModule,
   ],
   controllers: [AppController],
   providers: [

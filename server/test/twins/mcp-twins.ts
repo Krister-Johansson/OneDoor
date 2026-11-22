@@ -55,6 +55,8 @@ interface McpTwinOptions {
   name: string;
   title?: string;
   description?: string;
+  // Icon URLs the server lists in its serverInfo.
+  iconUrls?: string[];
   toolNames: string[];
 }
 
@@ -68,6 +70,7 @@ async function serveMcp(
     name: options.name,
     title: options.title,
     description: options.description,
+    icons: options.iconUrls?.map((src) => ({ src })),
     version: '1.2.3',
   });
   for (const toolName of options.toolNames) {
@@ -196,5 +199,57 @@ export function startHtmlTwin(): Promise<Twin> {
   return listen((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/html' });
     res.end('<html><body>Hello</body></html>');
+  });
+}
+
+// A 1x1 PNG.
+export const TWIN_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+// The start of an ICO file: reserved 0, type 1, one image.
+export const TWIN_ICO = Buffer.from([
+  0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x10, 0x10, 0x00, 0x00,
+]);
+
+export interface IconTwinOptions {
+  // What the icon in serverInfo (/icon.png) serves: a PNG, HTML labelled as
+  // image/png, a 300 KB PNG, or no icon in serverInfo at all.
+  mcpIcon: 'png' | 'html' | 'oversized' | 'none';
+  // What /favicon.ico serves.
+  favicon: 'ico' | 'none';
+}
+
+// An MCP server without authentication whose icons can be good or bad, for
+// the icon rules (REQ-CONN-070, REQ-CONN-071).
+export function startIconTwin(options: IconTwinOptions): Promise<Twin> {
+  return listen(async (req, res, origin) => {
+    if (req.url === '/icon.png' && options.mcpIcon !== 'none') {
+      res.writeHead(200, { 'content-type': 'image/png' });
+      if (options.mcpIcon === 'png') return void res.end(TWIN_PNG);
+      if (options.mcpIcon === 'html') {
+        return void res.end(
+          '<!doctype html><html><body>Not an image</body></html>',
+        );
+      }
+      const big = Buffer.alloc(300 * 1024);
+      TWIN_PNG.copy(big);
+      return void res.end(big);
+    }
+    if (req.url === '/favicon.ico' && options.favicon === 'ico') {
+      res.writeHead(200, { 'content-type': 'image/x-icon' });
+      return void res.end(TWIN_ICO);
+    }
+    if (req.url?.startsWith('/mcp')) {
+      await serveMcp(req, res, {
+        name: 'icon-twin',
+        title: 'Icon Twin',
+        iconUrls: options.mcpIcon === 'none' ? [] : [`${origin}/icon.png`],
+        toolNames: ['echo'],
+      });
+      return;
+    }
+    notFound(res);
   });
 }

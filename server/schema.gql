@@ -29,6 +29,9 @@ type CatalogEntry {
   connection: Connection
   description: String!
   displayName: String!
+
+  """The icon's URL path on this server (REQ-CONN-070)."""
+  iconUrl: String!
   id: ID!
 
   """A stable identifier, such as github."""
@@ -81,6 +84,11 @@ type Connection {
 
   """Text before the API key in the header. Only for API_KEY."""
   headerPrefix: String
+
+  """
+  The icon's URL path on this server: a stored icon, or the generated letter icon (REQ-CONN-070).
+  """
+  iconUrl: String!
   id: ID!
 
   """The OAuth client id of a custom OAUTH_MANUAL connection."""

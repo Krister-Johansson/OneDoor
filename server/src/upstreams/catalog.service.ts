@@ -6,6 +6,7 @@ import {
   ValidationError,
 } from '../errors/domain-errors.js';
 import type { AuthType } from '../generated/prisma/enums.js';
+import { iconPath } from '../icons/icons.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { toDomainError } from '../prisma/prisma-error.mapper.js';
 import type { CatalogEntryModel } from './catalog-entry.model.js';
@@ -32,6 +33,7 @@ export class CatalogService {
         key: entry.key,
         displayName: entry.displayName,
         description: entry.description,
+        iconUrl: iconPath(entry.iconId, entry.displayName),
         authOptions: entry.authOptions.map((option) => ({
           authType: option.authType,
           url: option.url,
