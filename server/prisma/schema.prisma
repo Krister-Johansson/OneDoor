@@ -33,25 +33,44 @@ enum AuthType {
   @@map("auth_type")
 }
 
-/// A pre-installed server that any user can switch on (REQ-CONN-010).
-/// OAuth client details for OAUTH_MANUAL entries come from server config.
+/// A pre-installed server that any user can switch on (REQ-CONN-010). Its
+/// auth options say how to connect; the seed creates and updates entries.
 model CatalogEntry {
-  id           String       @id @default(uuid(7)) @db.Uuid
+  id          String              @id @default(uuid(7)) @db.Uuid
   /// Stable identifier for seeds and config, such as `github`.
-  key          String       @unique
-  displayName  String       @unique @map("display_name") @db.Citext
-  description  String       @default("")
-  url          String
-  authType     AuthType     @map("auth_type")
-  /// Only for API_KEY.
-  headerName   String?      @map("header_name")
-  /// Only for API_KEY. May be empty.
-  headerPrefix String?      @map("header_prefix")
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  connections  Connection[]
+  key         String              @unique
+  displayName String              @unique @map("display_name") @db.Citext
+  description String              @default("")
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  authOptions CatalogAuthOption[]
+  connections Connection[]
 
   @@map("catalog_entry")
+}
+
+/// One way to connect to a catalog entry: an auth type with its URL and, for
+/// API_KEY, the header settings (REQ-CONN-010). OAuth client details for an
+/// OAUTH_MANUAL option come from server config.
+model CatalogAuthOption {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  catalogEntryId String       @map("catalog_entry_id") @db.Uuid
+  catalogEntry   CatalogEntry @relation(fields: [catalogEntryId], references: [id], onDelete: Cascade)
+  authType       AuthType     @map("auth_type")
+  url            String
+  /// Only for API_KEY.
+  headerName     String?      @map("header_name")
+  /// Only for API_KEY. May be empty.
+  headerPrefix   String?      @map("header_prefix")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  connections    Connection[]
+
+  @@unique([catalogEntryId, authType])
+  /// Target of the connection's composite foreign key, so a connection's
+  /// option always belongs to its entry.
+  @@unique([catalogEntryId, id])
+  @@map("catalog_auth_option")
 }
 
 /// A user's link to one MCP server: either based on a catalog entry, or a
@@ -59,33 +78,36 @@ model CatalogEntry {
 /// description, URL, auth type and header settings from the entry, so those
 /// columns are null on it; a check constraint in the migration enforces this.
 model Connection {
-  id                          String        @id @default(uuid(7)) @db.Uuid
-  ownerId                     String        @map("owner_id") @db.Uuid
-  owner                       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  catalogEntryId              String?       @map("catalog_entry_id") @db.Uuid
-  catalogEntry                CatalogEntry? @relation(fields: [catalogEntryId], references: [id], onDelete: Restrict)
+  id                          String             @id @default(uuid(7)) @db.Uuid
+  ownerId                     String             @map("owner_id") @db.Uuid
+  owner                       User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  catalogEntryId              String?            @map("catalog_entry_id") @db.Uuid
+  catalogEntry                CatalogEntry?      @relation(fields: [catalogEntryId], references: [id], onDelete: Restrict)
+  /// The auth option chosen when the entry was switched on (REQ-CONN-012).
+  catalogAuthOptionId         String?            @map("catalog_auth_option_id") @db.Uuid
+  catalogAuthOption           CatalogAuthOption? @relation(fields: [catalogEntryId, catalogAuthOptionId], references: [catalogEntryId, id], onDelete: Restrict)
   /// Unique per owner, ignoring case (citext). Null on catalog-based connections.
-  displayName                 String?       @map("display_name") @db.Citext
+  displayName                 String?            @map("display_name") @db.Citext
   description                 String?
   url                         String?
-  authType                    AuthType?     @map("auth_type")
+  authType                    AuthType?          @map("auth_type")
   /// Only for API_KEY.
-  headerName                  String?       @map("header_name")
+  headerName                  String?            @map("header_name")
   /// Only for API_KEY. May be empty.
-  headerPrefix                String?       @map("header_prefix")
+  headerPrefix                String?            @map("header_prefix")
   /// The API key, encrypted by SecretStore with the context
   /// `connection:<id>:api_key` (REQ-CONN-041). For API_KEY connections,
   /// custom or catalog-based.
-  apiKeyCiphertext            String?       @map("api_key_ciphertext")
-  apiKeyKeyId                 String?       @map("api_key_key_id")
+  apiKeyCiphertext            String?            @map("api_key_ciphertext")
+  apiKeyKeyId                 String?            @map("api_key_key_id")
   /// Only for custom OAUTH_MANUAL connections. Not a secret.
-  oauthClientId               String?       @map("oauth_client_id")
+  oauthClientId               String?            @map("oauth_client_id")
   /// Encrypted like the API key, with the context `connection:<id>:oauth_client_secret`.
-  oauthClientSecretCiphertext String?       @map("oauth_client_secret_ciphertext")
-  oauthClientSecretKeyId      String?       @map("oauth_client_secret_key_id")
-  enabled                     Boolean       @default(true)
-  createdAt                   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  oauthClientSecretCiphertext String?            @map("oauth_client_secret_ciphertext")
+  oauthClientSecretKeyId      String?            @map("oauth_client_secret_key_id")
+  enabled                     Boolean            @default(true)
+  createdAt                   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([ownerId, displayName])
   @@unique([ownerId, catalogEntryId])

@@ -23,7 +23,7 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 
 Spec: `specs/connections.md`.
 
-- [ ] T10 Catalog. Seed entries for GitHub, Context7 and Azure DevOps once their values are confirmed (see the spec's open questions), OAuth client details for catalog entries from config, the `catalog` query, `switchOnCatalogEntry`, and setting the API key of a catalog-based connection. Covers REQ-CONN-010 to 012. Human review: credential handling.
+- [ ] T10 Catalog. Catalog entries with auth options (spec change: an entry offers one option per auth type), the seed for GitHub (API key) and Context7 (OAuth with DCR, or API key), the `catalog` query, `switchOnCatalogEntry`, and the API key of a catalog-based connection. Covers REQ-CONN-010 to 013. Human review: migration, credential handling.
 - [ ] T11 Probe and credentials check. `probeServer` and `checkCredentials`, with the network rules for fetching. Covers REQ-CONN-060 to 063. Human review: fetching user-supplied URLs.
 - [ ] T12 Server icons. MCP `icons`, then the favicon, then a generated letter icon; stored and served from our origin. Covers REQ-CONN-070 and 071. Human review: fetching upstream URLs.
 - [ ] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql`, a `codegen` script, and a codegen drift check in web `verify`. Checkpoint: codegen setup.
@@ -40,7 +40,7 @@ Needs spec: `specs/upstreams.md`. Needs fake upstream MCP servers in `server/tes
 - [ ] T19 Tool policy. An enabled flag per tool, set by the owner, with new tools enabled. MCP annotations are shown as labels and never enforced. Adds the tools screen per connection.
 - [ ] T20 Upstream auth with an API key. `UpstreamAuthProvider` abstract class with the `NONE` and `API_KEY` implementations. Human review: credential handling.
 - [ ] T21 Upstream auth with OAuth and dynamic client registration (`OAUTH_DCR`). Human review: OAuth flow, callback, token refresh, discovery URL fetching.
-- [ ] T22 Upstream auth with OAuth and client details (`OAUTH_MANUAL`). Human review: OAuth flow.
+- [ ] T22 Upstream auth with OAuth and client details (`OAUTH_MANUAL`). Adds OAuth client details for catalog auth options from server config, an `OAUTH_MANUAL` option for GitHub (a GitHub OAuth app), and Azure DevOps (organization per connection, a public Entra client; see the spec's open questions). Human review: OAuth flow.
 
 ## Search
 

@@ -11,7 +11,8 @@ This spec covers the catalog of pre-installed servers, custom servers, credentia
 ## Terms
 
 - User: a person who owns connections. The proof of concept has exactly one user, named `me`. Every request acts as `me`.
-- Catalog entry: a pre-installed server that any user can switch on. It fixes the server's name, description, URL, icon and auth type.
+- Catalog entry: a pre-installed server that any user can switch on. It fixes the server's name, description and icon, and offers one or more auth options.
+- Auth option: one way to connect to a catalog entry: an auth type, the URL to use with it, and for `API_KEY` the header name and prefix.
 - Connection: a user's link to a server. It is either based on a catalog entry or a custom server that the user added.
 - Credentials: what a connection needs to authenticate: an API key, OAuth client details, or OAuth tokens.
 - Probe: a request that checks an MCP server before the user saves or uses a connection.
@@ -39,35 +40,50 @@ Users do not share connections or credentials. When two users switch on the same
 
 A catalog entry has:
 
+- a stable key, such as `github`,
 - a display name and a description,
-- a URL,
 - an icon,
-- an auth type (see REQ-CONN-040),
-- for `API_KEY`: the header name and header prefix,
-- for `OAUTH_MANUAL`: the OAuth client id and client secret.
+- one or more auth options, at most one per auth type. Each option has an auth type (see REQ-CONN-040) and a URL, and for `API_KEY` the header name and header prefix.
 
-The catalog is seeded with entries for GitHub, Context7 and Azure DevOps. The API cannot create, change or delete catalog entries. A migration or seed changes them.
+The API cannot create, change or delete catalog entries. The seed creates and updates them.
 
-The client id and client secret of an `OAUTH_MANUAL` entry come from server config, never from a committed seed file. The client secret is a secret (REQ-CONN-041).
+The catalog is seeded with:
 
-- WHEN the server starts on an empty database and the seed runs THEN the catalog holds the GitHub, Context7 and Azure DevOps entries.
+| Key | Display name | Auth options |
+|---|---|---|
+| `github` | GitHub | `API_KEY` at `https://api.githubcopilot.com/mcp/`, header `Authorization`, prefix `Bearer` (a personal access token) |
+| `context7` | Context7 | `OAUTH_DCR` at `https://mcp.context7.com/mcp/oauth`; `API_KEY` at `https://mcp.context7.com/mcp`, header `Authorization`, prefix `Bearer` |
+
+The client id and client secret of an `OAUTH_MANUAL` option come from server config, never from a committed seed file. The client secret is a secret (REQ-CONN-041).
+
+- WHEN the seed runs on an empty database THEN the catalog holds the GitHub and Context7 entries with the options above.
+- WHEN the seed runs again THEN no entry or option is duplicated.
 - WHEN a client tries to change a catalog entry through the API THEN no operation for it exists.
 
 ### REQ-CONN-011 Listing the catalog
 
-The catalog query returns every entry with the caller's connection for it, if one exists, so the web can show each entry as switched on or off and whether it needs credentials.
+The catalog query returns every entry, sorted by display name, with its auth options and the caller's connection for it, if one exists. The web shows each entry as switched on or off, and whether it needs credentials.
 
-- WHEN `me` has switched on GitHub and nothing else THEN the catalog lists GitHub with `me`'s connection, and Context7 and Azure DevOps with none.
+- WHEN `me` has switched on GitHub and nothing else THEN the catalog lists GitHub with `me`'s connection, and Context7 with none.
 
 ### REQ-CONN-012 Switching on a catalog entry
 
-Switching on an entry creates a connection for the caller that references the entry. The connection takes its display name, description, URL, icon, auth type and header settings from the entry. The user cannot change them on the connection. A later change to the entry applies to every connection based on it.
+Switching on an entry takes one of its auth options and creates a connection for the caller that references the entry and the option. The connection takes its display name, description and icon from the entry, and its URL, auth type and header settings from the option. The user cannot change them on the connection. A later change to the entry or option applies to every connection based on it.
 
-A caller has at most one connection per catalog entry. Switching on an entry the caller already has a connection for enables that connection.
+A caller has at most one connection per catalog entry. Switching on an entry the caller already has a connection for enables that connection. When the call names another auth option than the connection has, the connection moves to that option and its stored credentials are deleted, as for a changed auth type (REQ-CONN-023).
 
-- WHEN `me` switches on Context7 for the first time THEN a connection exists that references the Context7 entry and is enabled.
-- WHEN `me` switches on Context7 again after switching it off THEN the existing connection is enabled and no second connection is created.
+- WHEN `me` switches on Context7 with its `API_KEY` option for the first time THEN a connection exists that references Context7 and that option, is enabled, and is `NEEDS_CREDENTIALS`.
+- WHEN `me` switches on Context7 again with the same option after switching it off THEN the existing connection is enabled, its API key is kept, and no second connection is created.
+- WHEN `me` switches on Context7 with its `OAUTH_DCR` option while the connection uses `API_KEY` THEN the connection uses `OAUTH_DCR` and its API key is deleted.
+- WHEN `me` names an auth type the entry does not offer THEN the API answers `VALIDATION`.
 - WHEN `me` already has a custom connection with the entry's display name THEN switching on the entry answers `CONFLICT`, and the message says to rename the custom connection.
+
+### REQ-CONN-013 Credentials of a catalog-based connection
+
+The owner sets the credentials of a catalog-based connection with the same update as for a custom one, under the same rules (REQ-CONN-042). An update of a catalog-based connection may change only its credentials. For `API_KEY` that is the API key.
+
+- WHEN `me` saves an API key on the GitHub connection THEN it is stored encrypted and the connection is `READY`.
+- WHEN `me` tries to change the URL of the GitHub connection THEN the API answers `VALIDATION`.
 
 ## Custom servers
 
@@ -163,9 +179,9 @@ A connection is `NEEDS_CREDENTIALS` until its auth type's credentials are comple
 - `NONE`: always `READY`.
 - `API_KEY`: `READY` when an API key is stored.
 - `OAUTH_DCR`: `READY` when OAuth tokens are stored.
-- `OAUTH_MANUAL`: `READY` when the client details exist (on the connection or its catalog entry) and OAuth tokens are stored.
+- `OAUTH_MANUAL`: `READY` when the client details exist (on the connection, or in server config for a catalog option) and OAuth tokens are stored.
 
-- WHEN `me` switches on an `API_KEY` catalog entry THEN the connection is `NEEDS_CREDENTIALS`.
+- WHEN `me` switches on a catalog entry with its `API_KEY` option THEN the connection is `NEEDS_CREDENTIALS`.
 - WHEN `me` then saves an API key THEN the connection is `READY`.
 
 ## Enabled and removal
@@ -272,9 +288,9 @@ GraphQL serves the web. Names are final in code; the operations are:
 |---|---|---|
 | `catalog` | query | REQ-CONN-011 |
 | `connections`, `connection(id)` | query | REQ-CONN-001 |
-| `switchOnCatalogEntry(catalogEntryId)` | mutation | REQ-CONN-012 |
+| `switchOnCatalogEntry(catalogEntryId, authType)` | mutation | REQ-CONN-012 |
 | `createConnection(input)` | mutation | REQ-CONN-020 to REQ-CONN-023 |
-| `updateConnection(id, input)` | mutation | REQ-CONN-023, REQ-CONN-042 |
+| `updateConnection(id, input)` | mutation | REQ-CONN-013, REQ-CONN-023, REQ-CONN-042 |
 | `setConnectionEnabled(id, enabled)` | mutation | REQ-CONN-051 |
 | `removeConnection(id)` | mutation | REQ-CONN-052 |
 | `probeServer(url)` | mutation | REQ-CONN-060 |
@@ -290,7 +306,7 @@ Errors use the domain error codes: a duplicate display name is `CONFLICT`; an in
 
 The servers screen has two sections:
 
-- Catalog: one card per entry with its icon, name and description, a switch, and "Needs credentials" when the caller's connection is `NEEDS_CREDENTIALS`.
+- Catalog: one card per entry with its icon, name and description, a switch, and "Needs credentials" when the caller's connection is `NEEDS_CREDENTIALS`. When an entry offers more than one auth option, switching it on asks which one to use.
 - My servers: the caller's custom connections, sorted by display name, each with its icon, name, URL, auth type and enabled state, and links to edit and remove.
 
 - WHEN `me` has no custom connections THEN "My servers" shows an empty state with the "Add server" action.
@@ -309,6 +325,6 @@ In the edit form, each secret field shows "Set" or "Not set", never the value. T
 
 ## Open questions
 
-- The seed values for GitHub, Context7 and Azure DevOps (URL, auth type, header settings) are not decided. Check each against the vendor's current documentation before seeding. The Azure DevOps server may use a URL per organization, which a fixed catalog URL cannot express.
+- Azure DevOps is not in the catalog yet. Its remote server is `https://mcp.dev.azure.com/{organization}`, accepts only Microsoft Entra OAuth, and Entra does not support dynamic client registration. Adding it needs the organization per connection and an `OAUTH_MANUAL` option with a public Entra client (no client secret). A personal access token works only with Microsoft's local Azure DevOps MCP server, which runs as a local process; local servers are out of scope for now.
 - Tools are stored per connection, because a server can list different tools for different credentials. `specs/upstreams.md` and `specs/search.md` decide this, and whether embeddings are reused across connections when the embedded text matches.
 - Sharing connections within a team is out of scope and may come later.
