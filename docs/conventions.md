@@ -835,6 +835,27 @@ export function useConnectionStatusChanges(): void {
 
 - A component that shows a live value wraps it in `aria-live="polite"`, so screen readers announce the change.
 
+### Waiting for background work
+
+A mutation that only queues work (`resyncTools`) returns before the work ends. The server publishes an event when the work finishes, also when nothing changed, and a subscription sends the object with its new fields (`connectionToolsSynced`).
+
+- The subscription hook takes an optional callback, so a component can react to one object's event. Apollo shares one subscription between all calls of the same document.
+
+```ts
+export function useConnectionToolSyncs(onSynced?: (connectionId: string) => void): void {
+  useSubscription(ConnectionToolsSyncedDocument, {
+    ignoreResults: true,
+    onData: ({ data }) => {
+      const id = data.data?.connectionToolsSynced.id
+      if (id) onSynced?.(id)
+    },
+  })
+}
+```
+
+- The button that starts the work sets a waiting state before the mutation and clears it when its object's event arrives, when the mutation fails, when the work can no longer finish (the client leaves `CONNECTED`), or after a time limit longer than the job's worst case. `resync-tools-button.tsx` is the example.
+- A control that cannot work in the current state is not rendered, rather than shown disabled with no way to enable it.
+
 ## Web routes, hooks and components
 
 Approved 2026-11-22.

@@ -36,7 +36,7 @@ Spec: `specs/connections.md`.
 
 Needs spec: `specs/upstreams.md`. Needs fake upstream MCP servers in `server/test/twins/`, which are human-owned.
 
-- [ ] T18 Tool sync. A BullMQ job when a connection becomes enabled and `READY`, and on tool-list change: list tools, diff by content hash, store the tools. Adds a "re-sync tools" action. The server part is merged (PR #51); the web re-sync action is open.
+- [x] T18 Tool sync. A BullMQ job when a connection becomes enabled and `READY`, and on tool-list change: list tools, diff by content hash, store the tools. Adds a "re-sync tools" action. Server in PR #51, web and the `connectionToolsSynced` subscription in PR #55.
 - [ ] T19 Tool policy. An enabled flag per tool, set by the owner, with new tools enabled. MCP annotations are shown as labels and never enforced. Adds the tools screen per connection.
 - [ ] T20 Upstream auth with an API key. `UpstreamAuthProvider` abstract class with the `NONE` and `API_KEY` implementations. Human review: credential handling.
 - [ ] T21 Upstream auth with OAuth and dynamic client registration (`OAUTH_DCR`). Human review: OAuth flow, callback, token refresh, discovery URL fetching.
