@@ -30,3 +30,24 @@ export interface ConnectionToolsSynced {
 export const CONNECTION_TOOLS_SYNCED = defineTopic<ConnectionToolsSynced>(
   'connection-tools-synced',
 );
+
+// The MCP tool annotation hints, read from the stored annotations. Each is
+// null when the server did not send it as a boolean. They are hints from an
+// untrusted server: shown as labels, never enforced.
+export interface ToolAnnotations {
+  readOnlyHint: boolean | null;
+  destructiveHint: boolean | null;
+  idempotentHint: boolean | null;
+  openWorldHint: boolean | null;
+}
+
+// A stored tool as the owner sees it (T19).
+export interface Tool {
+  id: string;
+  connectionId: string;
+  name: string;
+  title: string | null;
+  description: string;
+  annotations: ToolAnnotations;
+  enabled: boolean;
+}

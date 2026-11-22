@@ -104,6 +104,9 @@ type Connection {
   How many tools the last tool sync stored. A failed sync and a disabled connection keep them.
   """
   toolCount: Int!
+
+  """The tools the last tool sync stored, by name (T19)."""
+  tools: [Tool!]!
   updatedAt: DateTime!
   url: String!
 }
@@ -197,6 +200,9 @@ type Mutation {
   """Enables or disables a connection (REQ-CONN-051)."""
   setConnectionEnabled(enabled: Boolean!, id: ID!): Connection!
 
+  """Enables or disables one of the caller's tools (T19)."""
+  setToolEnabled(enabled: Boolean!, id: ID!): Tool!
+
   """
   Switches on a catalog entry with one of its auth options and returns the connection (REQ-CONN-012). Switch it off with setConnectionEnabled.
   """
@@ -269,6 +275,35 @@ type Subscription {
   Sends one of the caller's connections each time a sync of its tools finishes, with its new toolCount.
   """
   connectionToolsSynced: Connection!
+}
+
+"""
+A tool of one of the caller's connections, as the last tool sync stored it.
+"""
+type Tool {
+  annotations: ToolAnnotations!
+  connectionId: ID!
+  description: String!
+
+  """
+  Set by the owner (T19). A new tool is enabled, and a sync keeps the flag. The gateway does not search or execute a disabled tool.
+  """
+  enabled: Boolean!
+  id: ID!
+
+  """The name the upstream server uses."""
+  name: String!
+  title: String
+}
+
+"""
+The MCP annotation hints of a tool. The upstream server sets them and may get them wrong: OneDoor shows them as labels and never enforces them. A hint the server did not send as a boolean is null.
+"""
+type ToolAnnotations {
+  destructiveHint: Boolean
+  idempotentHint: Boolean
+  openWorldHint: Boolean
+  readOnlyHint: Boolean
 }
 
 """

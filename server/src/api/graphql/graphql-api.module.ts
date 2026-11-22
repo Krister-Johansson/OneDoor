@@ -12,6 +12,7 @@ import { ConnectionsMutation } from './connections/connections.mutation.js';
 import { ConnectionsQuery } from './connections/connections.query.js';
 import { ConnectionsSubscription } from './connections/connections.subscription.js';
 import { ProbeMutation } from './probe/probe.mutation.js';
+import { ToolsMutation } from './tools/tools.mutation.js';
 
 // The GraphQL API for the web UI, code-first. The schema is built in memory;
 // test/schema.e2e-spec.ts keeps server/schema.gql in step with it.
@@ -54,6 +55,7 @@ import { ProbeMutation } from './probe/probe.mutation.js';
     CatalogMutation,
     ConnectionResolver,
     ConnectionsSubscription,
+    ToolsMutation,
     ProbeMutation,
   ],
 })

@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { z } from 'zod';
+import { NotFoundError } from '../../../errors/domain-errors.js';
 import { EventBus } from '../../../events/event-bus.js';
 import { Prisma } from '../../../generated/prisma/client.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
@@ -6,9 +8,11 @@ import { toDomainError } from '../../../prisma/prisma-error.mapper.js';
 import {
   CONNECTION_TOOLS_SYNCED,
   type ConnectionToolsSynced,
+  type Tool,
   type ToolSyncResult,
   type UpstreamTool,
 } from './tool.interface.js';
+import { toTool } from './tool.mapper.js';
 import { toolContentHash } from './tool-hash.js';
 
 // The stored tools of each connection.
@@ -20,6 +24,42 @@ export class ToolsService {
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBus,
   ) {}
+
+  // The stored tools of a connection, by name. The caller has checked that
+  // the connection belongs to its owner.
+  async listForConnection(connectionId: string): Promise<Tool[]> {
+    try {
+      const rows = await this.prisma.tool.findMany({
+        where: { connectionId },
+        orderBy: { name: 'asc' },
+      });
+      return rows.map(toTool);
+    } catch (error) {
+      throw toDomainError(error, 'Tool');
+    }
+  }
+
+  // Enables or disables one of the owner's tools (T19). A sync keeps the
+  // flag.
+  async setEnabled(
+    ownerId: string,
+    id: string,
+    enabled: boolean,
+  ): Promise<Tool> {
+    if (!z.uuid().safeParse(id).success) {
+      throw new NotFoundError('Tool not found');
+    }
+    try {
+      return toTool(
+        await this.prisma.tool.update({
+          where: { id, ownerId },
+          data: { enabled },
+        }),
+      );
+    } catch (error) {
+      throw toDomainError(error, 'Tool');
+    }
+  }
 
   // The syncs of the owner's connections, as they finish.
   toolSyncs(
