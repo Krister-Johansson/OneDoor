@@ -11,6 +11,55 @@ import type { TypedDocumentNode as DocumentNode } from "@graphql-typed-document-
 /** How OneDoor authenticates to an MCP server (REQ-CONN-040). */
 export type AuthType = "API_KEY" | "NONE" | "OAUTH_DCR" | "OAUTH_MANUAL"
 
+/** Credentials to check before saving (REQ-CONN-062). Nothing is stored. */
+export type CheckCredentialsInput = {
+  /** Required for API_KEY. */
+  apiKey?: string | null | undefined
+  /** NONE or API_KEY. */
+  authType: AuthType
+  /** Defaults to Authorization. */
+  headerName?: string | null | undefined
+  /** Defaults to Bearer. */
+  headerPrefix?: string | null | undefined
+  url: string
+}
+
+/** A custom server to add (REQ-CONN-020). */
+export type CreateConnectionInput = {
+  /** Required for API_KEY, and only for it. Write-only. */
+  apiKey?: string | null | undefined
+  authType: AuthType
+  description?: string | null | undefined
+  /** 1 to 60 characters, unique per user ignoring case. */
+  displayName: string
+  /** Only for API_KEY. Defaults to Authorization. */
+  headerName?: string | null | undefined
+  /** Only for API_KEY. Defaults to Bearer. May be empty. */
+  headerPrefix?: string | null | undefined
+  /** Required for OAUTH_MANUAL, and only for it. */
+  oauthClientId?: string | null | undefined
+  /** Required for OAUTH_MANUAL, and only for it. Write-only. */
+  oauthClientSecret?: string | null | undefined
+  /** https, or http only for localhost and 127.0.0.1. */
+  url: string
+}
+
+/** OK: connected and listed the tools. REFUSED_CREDENTIALS: the server answered 401 or 403. The other values mean the same as in ProbeStatus. */
+export type CredentialsStatus =
+  | "NOT_MCP"
+  | "OK"
+  | "REFUSED"
+  | "REFUSED_CREDENTIALS"
+  | "UNREACHABLE"
+
+/** MCP_SERVER: answered MCP initialize. AUTH_REQUIRED: answered 401 or 403. NOT_MCP: answered, but not MCP. UNREACHABLE: no answer within 10 seconds. REFUSED: the network rules stopped the request (REQ-CONN-063). */
+export type ProbeStatus =
+  | "AUTH_REQUIRED"
+  | "MCP_SERVER"
+  | "NOT_MCP"
+  | "REFUSED"
+  | "UNREACHABLE"
+
 /** Whether the credentials of a connection are complete (REQ-CONN-044). */
 export type SetupState = "NEEDS_CREDENTIALS" | "READY"
 
@@ -83,6 +132,45 @@ export type SetConnectionEnabledMutation = {
     id: string
     setupState: SetupState
     enabled: boolean
+  }
+}
+
+export type CreateConnectionMutationVariables = Exact<{
+  input: CreateConnectionInput
+}>
+
+export type CreateConnectionMutation = {
+  createConnection: { __typename: "Connection"; id: string }
+}
+
+export type ProbeServerMutationVariables = Exact<{
+  url: string
+}>
+
+export type ProbeServerMutation = {
+  probeServer: {
+    __typename: "ProbeResult"
+    status: ProbeStatus
+    message: string
+    authRequired: boolean
+    oauthDcr: boolean
+    suggestedAuthType: AuthType | null
+    serverName: string | null
+    serverTitle: string | null
+  }
+}
+
+export type CheckCredentialsMutationVariables = Exact<{
+  input: CheckCredentialsInput
+}>
+
+export type CheckCredentialsMutation = {
+  checkCredentials: {
+    __typename: "CredentialsCheck"
+    status: CredentialsStatus
+    message: string
+    toolCount: number | null
+    toolNames: Array<string>
   }
 }
 
@@ -347,4 +435,175 @@ export const SetConnectionEnabledDocument = {
 } as unknown as DocumentNode<
   SetConnectionEnabledMutation,
   SetConnectionEnabledMutationVariables
+>
+export const CreateConnectionDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "CreateConnection" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "input" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "CreateConnectionInput" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "createConnection" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "input" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "input" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  CreateConnectionMutation,
+  CreateConnectionMutationVariables
+>
+export const ProbeServerDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "ProbeServer" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "url" } },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "String" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "probeServer" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "url" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "url" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "status" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "authRequired" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "oauthDcr" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "suggestedAuthType" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "serverName" } },
+                { kind: "Field", name: { kind: "Name", value: "serverTitle" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<ProbeServerMutation, ProbeServerMutationVariables>
+export const CheckCredentialsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "CheckCredentials" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "input" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "CheckCredentialsInput" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "checkCredentials" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "input" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "input" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "status" } },
+                { kind: "Field", name: { kind: "Name", value: "message" } },
+                { kind: "Field", name: { kind: "Name", value: "toolCount" } },
+                { kind: "Field", name: { kind: "Name", value: "toolNames" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  CheckCredentialsMutation,
+  CheckCredentialsMutationVariables
 >

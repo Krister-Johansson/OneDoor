@@ -1,0 +1,23 @@
+# Checks a server URL without credentials (REQ-CONN-060). A mutation, because
+# it sends a request to another host.
+mutation ProbeServer($url: String!) {
+  probeServer(url: $url) {
+    status
+    message
+    authRequired
+    oauthDcr
+    suggestedAuthType
+    serverName
+    serverTitle
+  }
+}
+
+# Connects with credentials and lists the tools (REQ-CONN-062).
+mutation CheckCredentials($input: CheckCredentialsInput!) {
+  checkCredentials(input: $input) {
+    status
+    message
+    toolCount
+    toolNames
+  }
+}
