@@ -776,6 +776,8 @@ Forms use TanStack Form (`@tanstack/react-form`) with shadcn's `Field` component
 - `onSubmit` maps the values to the GraphQL input, sending only the fields that apply, calls the mutation hook, and on success closes the dialog and resets the form. On an error it shows a message by `errorCode()` above the buttons.
 - A field filled in from a server response (the probe) is filled again only while the user has not changed it.
 - Secret inputs use `type="password"` and `autoComplete="off"`, and are never filled in from stored values.
+- An edit form sends only the fields that changed. A stored secret shows "Set" or "Not set" above an empty input: empty keeps it (the field is left out), "Clear" sends `null`, and a typed value replaces it. `edit-server-dialog.tsx` is the example.
+- A list row that has its own dialogs is its own component (`my-server-row.tsx`) and holds their open state.
 
 ### shadcn components
 

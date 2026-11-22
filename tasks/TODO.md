@@ -23,12 +23,12 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T12 Server icons. MCP icons, then the favicon, then a letter icon, fetched in the background through `GuardedFetch`, checked from the bytes, and served from `/icons` (migration `20261122004055_icons`).
 - [x] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql` into `src/gql/graphql.ts`, the `codegen` script and its drift check in web `verify`, and the Nitro proxy for `/graphql` and `/icons`.
 - [x] T14 Servers screen. `/servers` with the catalog cards and "My servers" (REQ-CONN-080), `useCatalog()` and `useConnections()` read from queries the route loader preloads, and the first shadcn components. The catalog switch and the add, edit and remove actions are disabled until mutations exist.
+- [x] T15 Catalog switch and server dialogs. The catalog switch with the auth option choice, the add dialog with probe pre-fill and the credentials check (TanStack Form), the edit form with write-only secrets, and remove with confirmation (REQ-CONN-080 to 082).
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T15 Catalog switch and server dialogs. The catalog switch: switching on calls `switchOnCatalogEntry` and asks which auth option to use when an entry offers more than one, and switching off calls `setConnectionEnabled` (REQ-CONN-080). The add dialog with probe pre-fill and the credentials check, the edit form with write-only secret fields that show "Set" or "Not set", and remove with confirmation. Covers REQ-CONN-081 and 082. Checkpoint: first mutation hook, first dialog.
 
 ## Upstream servers
 
