@@ -739,8 +739,34 @@ export const Route = createFileRoute("/servers")({
 
 The loader does not return the query refs. The hooks read the results from the cache, so they take no arguments.
 
+### Mutation hooks
+
+A hook wraps one mutation and returns a named function with plain arguments, plus `loading`:
+
+```ts
+// src/hooks/use-set-connection-enabled.ts
+export function useSetConnectionEnabled() {
+  const [mutate, { loading }] = useMutation(SetConnectionEnabledDocument)
+  const setEnabled = (id: string, enabled: boolean) =>
+    mutate({ variables: { id, enabled } })
+  return { setEnabled, loading }
+}
+```
+
+- The mutation selects the changed object's `id` and the fields screens show, so Apollo updates the cached object by id.
+- A mutation that creates an object, or changes which object a field points to, refetches the queries that show it, with `refetchQueries: [XDocument]` and `awaitRefetchQueries: true`. `useSwitchOnCatalogEntry` refetches `Catalog` and `Connections`.
+- The function rejects on an error. The component catches it.
+
+### Errors in the UI
+
+`errorCode(error)` in `src/lib/graphql-error.ts` returns the server's `extensions.code`, or `undefined`. A component maps the codes it expects to its own message and has a generic message for the rest. It never shows the server's message text. The message appears next to the control, in an element with `role="alert"`.
+
+### Dialogs
+
+A dialog is a component in `src/components/<screen>/` built on shadcn `Dialog`, controlled by its parent through `open` and `onOpenChange`. It reports the user's choice through a callback, such as `onChoose(authType)`, and the parent runs the mutation.
+
 ### shadcn components
 
-- Add components with `pnpm dlx shadcn@latest add <component> --yes`. They are committed in `src/components/ui/` and may be edited.
+- Add components with `pnpm dlx shadcn@latest add <component> --yes`. They are committed in `src/components/ui/` and may be edited. When the CLI asks to overwrite an existing component, answer no (`printf 'n\n' | pnpm dlx shadcn@latest add ...`).
 - An edit to a generated component carries a comment that says why. `ItemGroup` in `item.tsx` renders a `<ul>` for Biome's `useSemanticElements` rule, and items in it use `render={<li />}`.
 - Icons from the server are rendered with `<img src={iconUrl} alt="">`, never inlined.
