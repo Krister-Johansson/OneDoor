@@ -22,13 +22,13 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T11 Probe and credentials check. `GuardedFetch` in `NetModule` with the network rules, `probeServer` (MCP initialize and OAuth discovery) and `checkCredentials`, and the first test twins.
 - [x] T12 Server icons. MCP icons, then the favicon, then a letter icon, fetched in the background through `GuardedFetch`, checked from the bytes, and served from `/icons` (migration `20261122004055_icons`).
 - [x] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql` into `src/gql/graphql.ts`, the `codegen` script and its drift check in web `verify`, and the Nitro proxy for `/graphql` and `/icons`.
+- [x] T14 Servers screen. `/servers` with the catalog cards and "My servers" (REQ-CONN-080), `useCatalog()` and `useConnections()` read from queries the route loader preloads, and the first shadcn components. The catalog switch and the add, edit and remove actions are disabled until mutations exist.
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T14 Servers screen. First route, with the catalog section and "My servers" (REQ-CONN-080). `useConnections()` and `useCatalog()` in `src/hooks/`, shadcn components added with the shadcn CLI. Checkpoint: first route, first hook wrapper.
-- [ ] T15 Add and edit dialogs. The add dialog with probe pre-fill and the credentials check, the edit form with write-only secret fields that show "Set" or "Not set", and remove with confirmation. Covers REQ-CONN-081 and 082.
+- [ ] T15 Catalog switch and server dialogs. The catalog switch: switching on calls `switchOnCatalogEntry` and asks which auth option to use when an entry offers more than one, and switching off calls `setConnectionEnabled` (REQ-CONN-080). The add dialog with probe pre-fill and the credentials check, the edit form with write-only secret fields that show "Set" or "Not set", and remove with confirmation. Covers REQ-CONN-081 and 082. Checkpoint: first mutation hook, first dialog.
 
 ## Upstream servers
 

@@ -681,16 +681,7 @@ web/
 
 ### Using a document
 
-Pass the generated document to Apollo's hooks, with no type arguments:
-
-```ts
-import { useQuery } from "@apollo/client/react"
-import { ConnectionsDocument } from "#/gql/graphql"
-
-const { data } = useQuery(ConnectionsDocument)
-```
-
-Data needed when the page renders on the server comes from `preloadQuery` in the route loader. `useQuery` alone renders the loading state on the server.
+Pass the generated document to Apollo's hooks, with no type arguments. A query a screen reads goes through a hook in `src/hooks/` (see "Web routes, hooks and components"). `useQuery` alone renders the loading state on the server, so screens use `useSuspenseQuery` with the query preloaded in the route loader.
 
 ### Client and endpoint
 
@@ -698,3 +689,58 @@ Data needed when the page renders on the server comes from `preloadQuery` in the
 - `graphqlEndpoint()` in `src/lib/graphql-endpoint.ts` is the GraphQL URL: `/graphql` in the browser, `${API_URL}/graphql` on the server.
 - The browser talks only to the web server. Nitro `routeRules` in `vite.config.ts` forward `/graphql` and `/icons/**` to `API_URL` (default `http://127.0.0.1:3000`). Vite's `server.proxy` has no effect under Nitro.
 - `API_URL` is listed in `web/.env.example`.
+
+## Web routes, hooks and components
+
+Approved 2026-11-22.
+
+### Files
+
+```text
+web/src/
+├── routes/servers.tsx                  createFileRoute("/servers"): loader, head, component
+├── hooks/use-connections.ts            useConnections()
+├── components/servers/                 the screen's sections, one component per file
+│   ├── catalog-section.tsx
+│   └── my-servers-section.tsx
+├── components/ui/                      shadcn components, added with the CLI
+└── lib/auth-type.ts                    labels and small helpers shared by screens
+```
+
+- File names are kebab-case. A screen's components live in `src/components/<screen>/`.
+- `/` redirects to `/servers` in `beforeLoad`.
+- The route component renders the page frame (`<main>`, `<h1>`) and the sections. A section reads its data through hooks; the route passes no data down.
+- Each route sets its title in `head`: `"<Screen> · OneDoor"`.
+- Layout works at 375 px with no horizontal scroll: `p-4 sm:p-8` on the page, and rows that wrap.
+
+### Query hooks
+
+A hook wraps one query and returns the field the screen needs:
+
+```ts
+// src/hooks/use-connections.ts
+export function useConnections() {
+  return useSuspenseQuery(ConnectionsDocument).data.connections
+}
+```
+
+The route loader preloads every query its sections read, so the requests start together and the server-rendered HTML holds the data:
+
+```ts
+export const Route = createFileRoute("/servers")({
+  loader: ({ context: { preloadQuery } }) => {
+    preloadQuery(CatalogDocument)
+    preloadQuery(ConnectionsDocument)
+  },
+  head: () => ({ meta: [{ title: "Servers · OneDoor" }] }),
+  component: ServersPage,
+})
+```
+
+The loader does not return the query refs. The hooks read the results from the cache, so they take no arguments.
+
+### shadcn components
+
+- Add components with `pnpm dlx shadcn@latest add <component> --yes`. They are committed in `src/components/ui/` and may be edited.
+- An edit to a generated component carries a comment that says why. `ItemGroup` in `item.tsx` renders a `<ul>` for Biome's `useSemanticElements` rule, and items in it use `render={<li />}`.
+- Icons from the server are rendered with `<img src={iconUrl} alt="">`, never inlined.
