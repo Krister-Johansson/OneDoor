@@ -10,6 +10,7 @@ import { appConfig } from './config/app.config.js';
 import { cryptoConfig } from './config/crypto.config.js';
 import { databaseConfig } from './config/database.config.js';
 import { envSchema } from './config/env.schema.js';
+import { eventsConfig } from './config/events.config.js';
 import { iconsConfig } from './config/icons.config.js';
 import { redisConfig } from './config/redis.config.js';
 import { upstreamsConfig } from './config/upstreams.config.js';
@@ -26,6 +27,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
         appConfig,
         cryptoConfig,
         databaseConfig,
+        eventsConfig,
         iconsConfig,
         redisConfig,
         upstreamsConfig,
