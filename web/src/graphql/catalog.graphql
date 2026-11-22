@@ -14,6 +14,7 @@ query Catalog {
       authType
       setupState
       enabled
+      status
     }
   }
 }
@@ -25,5 +26,6 @@ mutation SwitchOnCatalogEntry($catalogEntryId: ID!, $authType: AuthType!) {
     authType
     setupState
     enabled
+    status
   }
 }

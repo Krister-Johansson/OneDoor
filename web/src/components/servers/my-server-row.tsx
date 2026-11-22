@@ -13,6 +13,7 @@ import type { ConnectionsQuery } from "#/gql/graphql"
 import { useRemoveConnection } from "#/hooks/use-remove-connection"
 import { AUTH_TYPE_LABELS } from "#/lib/auth-type"
 import { errorCode } from "#/lib/graphql-error"
+import { ConnectionStatusBadge } from "./connection-status-badge"
 import { EditServerDialog } from "./edit-server-dialog"
 import { RemoveServerDialog } from "./remove-server-dialog"
 
@@ -63,6 +64,7 @@ export function MyServerRow({ connection }: { connection: Connection }) {
         <Badge variant={connection.enabled ? "default" : "outline"}>
           {connection.enabled ? "Enabled" : "Disabled"}
         </Badge>
+        <ConnectionStatusBadge status={connection.status} />
         <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
           Edit
         </Button>

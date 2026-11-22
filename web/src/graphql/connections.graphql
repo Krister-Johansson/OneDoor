@@ -15,6 +15,7 @@ query Connections {
     setupState
     iconUrl
     enabled
+    status
   }
 }
 
@@ -24,6 +25,7 @@ mutation SetConnectionEnabled($id: ID!, $enabled: Boolean!) {
     id
     setupState
     enabled
+    status
   }
 }
 
@@ -52,10 +54,21 @@ mutation UpdateConnection($id: ID!, $input: UpdateConnectionInput!) {
     setupState
     iconUrl
     enabled
+    status
   }
 }
 
 # Removes a connection with its credentials (REQ-CONN-052).
 mutation RemoveConnection($id: ID!) {
   removeConnection(id: $id)
+}
+
+# Sends a connection each time the status of its upstream client changes
+# (T17). Apollo updates the cached connection by id, so every view of it
+# shows the new status.
+subscription ConnectionStatusChanged {
+  connectionStatusChanged {
+    id
+    status
+  }
 }
