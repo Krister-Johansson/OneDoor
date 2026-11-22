@@ -1,0 +1,33 @@
+# One connection with its stored tools, for the tools screen (T19).
+query ConnectionTools($id: ID!) {
+  connection(id: $id) {
+    id
+    displayName
+    url
+    iconUrl
+    enabled
+    status
+    toolCount
+    tools {
+      id
+      name
+      title
+      description
+      enabled
+      annotations {
+        readOnlyHint
+        destructiveHint
+        idempotentHint
+        openWorldHint
+      }
+    }
+  }
+}
+
+# Enables or disables one tool (T19). Apollo updates the cached tool by id.
+mutation SetToolEnabled($id: ID!, $enabled: Boolean!) {
+  setToolEnabled(id: $id, enabled: $enabled) {
+    id
+    enabled
+  }
+}

@@ -1,5 +1,7 @@
+import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { Badge } from "#/components/ui/badge"
+import { buttonVariants } from "#/components/ui/button"
 import {
   Card,
   CardAction,
@@ -88,6 +90,13 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
               serverName={entry.displayName}
               onError={setError}
             />
+            <Link
+              to="/servers/$connectionId"
+              params={{ connectionId: connection.id }}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Tools
+            </Link>
           </div>
         )}
         {error && (

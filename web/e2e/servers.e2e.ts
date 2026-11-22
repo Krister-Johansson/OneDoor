@@ -161,3 +161,66 @@ test("shows a server's tool count live and re-syncs its tools (T18)", async ({
   await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
   await expect(resync).toHaveCount(0)
 })
+
+test("opens a server's tools and disables one (T19)", async ({
+  page,
+  request,
+}) => {
+  const data = await graphql(
+    request,
+    "mutation ($input: CreateConnectionInput!) { createConnection(input: $input) { id } }",
+    { input: { displayName: "Tools Twin", url: twinUrl(), authType: "NONE" } },
+  )
+  const id = data.createConnection?.id
+  // The first sync runs in the background. An event that ends before the
+  // page's socket subscribes is not replayed, so wait for it here.
+  await expect
+    .poll(async () => {
+      const synced = await graphql(
+        request,
+        "query ($id: ID!) { connection(id: $id) { toolCount } }",
+        { id },
+      )
+      return (synced.connection as { toolCount?: number } | undefined)
+        ?.toolCount
+    })
+    .toBe(OPEN_TWIN_TOOLS.length)
+
+  await page.goto("/servers")
+  const row = page.getByRole("listitem").filter({ hasText: "Tools Twin" })
+  await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
+  await row.getByRole("link", { name: "Tools" }).click()
+
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}$/)
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Tools Twin" }),
+  ).toBeVisible()
+  // The sidebar keeps the servers screen marked.
+  await expect(page.getByRole("link", { name: "Servers" })).toHaveAttribute(
+    "data-active",
+  )
+  const echo = page.getByRole("listitem").filter({ hasText: "echo" })
+  await expect(echo).toContainText("The echo tool.")
+  await expect(echo).toContainText("Read-only")
+  const echoSwitch = page.getByRole("switch", { name: "Use echo" })
+  await expect(echoSwitch).toBeChecked()
+  await expect(page.getByRole("switch", { name: "Use reverse" })).toBeChecked()
+
+  await echoSwitch.click()
+  await expect(echoSwitch).not.toBeChecked()
+  // The choice is stored, not only shown.
+  await page.reload()
+  await expect(page.getByRole("switch", { name: "Use echo" })).not.toBeChecked()
+  await expect(page.getByRole("switch", { name: "Use reverse" })).toBeChecked()
+})
+
+test("shows a message for a server that does not exist (T19)", async ({
+  page,
+}) => {
+  await page.goto("/servers/00000000-0000-4000-8000-000000000000")
+  await expect(page.getByRole("alert")).toHaveText(
+    "This server does not exist, or it was removed.",
+  )
+  await page.getByRole("link", { name: "Back to servers" }).click()
+  await expect(page).toHaveURL(/\/servers$/)
+})

@@ -1,6 +1,7 @@
+import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { Badge } from "#/components/ui/badge"
-import { Button } from "#/components/ui/button"
+import { Button, buttonVariants } from "#/components/ui/button"
 import {
   Item,
   ItemActions,
@@ -73,6 +74,13 @@ export function MyServerRow({ connection }: { connection: Connection }) {
           serverName={connection.displayName}
           onError={setError}
         />
+        <Link
+          to="/servers/$connectionId"
+          params={{ connectionId: connection.id }}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          Tools
+        </Link>
         <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
           Edit
         </Button>

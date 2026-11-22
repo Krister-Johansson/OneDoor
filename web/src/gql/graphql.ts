@@ -265,6 +265,47 @@ export type CheckCredentialsMutation = {
   }
 }
 
+export type ConnectionToolsQueryVariables = Exact<{
+  id: string | number
+}>
+
+export type ConnectionToolsQuery = {
+  connection: {
+    __typename: "Connection"
+    id: string
+    displayName: string
+    url: string
+    iconUrl: string
+    enabled: boolean
+    status: ConnectionStatus
+    toolCount: number
+    tools: Array<{
+      __typename: "Tool"
+      id: string
+      name: string
+      title: string | null
+      description: string
+      enabled: boolean
+      annotations: {
+        __typename: "ToolAnnotations"
+        readOnlyHint: boolean | null
+        destructiveHint: boolean | null
+        idempotentHint: boolean | null
+        openWorldHint: boolean | null
+      }
+    }>
+  }
+}
+
+export type SetToolEnabledMutationVariables = Exact<{
+  id: string | number
+  enabled: boolean
+}>
+
+export type SetToolEnabledMutation = {
+  setToolEnabled: { __typename: "Tool"; id: string; enabled: boolean }
+}
+
 export const CatalogDocument = {
   kind: "Document",
   definitions: [
@@ -953,4 +994,174 @@ export const CheckCredentialsDocument = {
 } as unknown as DocumentNode<
   CheckCredentialsMutation,
   CheckCredentialsMutationVariables
+>
+export const ConnectionToolsDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "ConnectionTools" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "ID" } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "connection" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "displayName" } },
+                { kind: "Field", name: { kind: "Name", value: "url" } },
+                { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
+                { kind: "Field", name: { kind: "Name", value: "enabled" } },
+                { kind: "Field", name: { kind: "Name", value: "status" } },
+                { kind: "Field", name: { kind: "Name", value: "toolCount" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "tools" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      { kind: "Field", name: { kind: "Name", value: "name" } },
+                      { kind: "Field", name: { kind: "Name", value: "title" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "description" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "enabled" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "annotations" },
+                        selectionSet: {
+                          kind: "SelectionSet",
+                          selections: [
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "readOnlyHint" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "destructiveHint" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "idempotentHint" },
+                            },
+                            {
+                              kind: "Field",
+                              name: { kind: "Name", value: "openWorldHint" },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  ConnectionToolsQuery,
+  ConnectionToolsQueryVariables
+>
+export const SetToolEnabledDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "SetToolEnabled" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "ID" } },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "enabled" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "Boolean" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "setToolEnabled" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "enabled" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "enabled" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "enabled" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  SetToolEnabledMutation,
+  SetToolEnabledMutationVariables
 >

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServersRouteImport } from './routes/servers'
+import { Route as ServersConnectionIdRouteImport } from './routes/servers_.$connectionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const ServersRoute = ServersRouteImport.update({
   path: '/servers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServersConnectionIdRoute = ServersConnectionIdRouteImport.update({
+  id: '/servers_/$connectionId',
+  path: '/servers/$connectionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/servers': typeof ServersRoute
+  '/servers/$connectionId': typeof ServersConnectionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/servers': typeof ServersRoute
+  '/servers/$connectionId': typeof ServersConnectionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/servers': typeof ServersRoute
+  '/servers_/$connectionId': typeof ServersConnectionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/servers'
+  fullPaths: '/' | '/servers' | '/servers/$connectionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/servers'
-  id: '__root__' | '/' | '/servers'
+  to: '/' | '/servers' | '/servers/$connectionId'
+  id: '__root__' | '/' | '/servers' | '/servers_/$connectionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ServersRoute: typeof ServersRoute
+  ServersConnectionIdRoute: typeof ServersConnectionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/servers_/$connectionId': {
+      id: '/servers_/$connectionId'
+      path: '/servers/$connectionId'
+      fullPath: '/servers/$connectionId'
+      preLoaderRoute: typeof ServersConnectionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ServersRoute: ServersRoute,
+  ServersConnectionIdRoute: ServersConnectionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
