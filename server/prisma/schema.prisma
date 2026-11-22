@@ -59,23 +59,33 @@ model CatalogEntry {
 /// description, URL, auth type and header settings from the entry, so those
 /// columns are null on it; a check constraint in the migration enforces this.
 model Connection {
-  id             String        @id @default(uuid(7)) @db.Uuid
-  ownerId        String        @map("owner_id") @db.Uuid
-  owner          User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  catalogEntryId String?       @map("catalog_entry_id") @db.Uuid
-  catalogEntry   CatalogEntry? @relation(fields: [catalogEntryId], references: [id], onDelete: Restrict)
+  id                          String        @id @default(uuid(7)) @db.Uuid
+  ownerId                     String        @map("owner_id") @db.Uuid
+  owner                       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  catalogEntryId              String?       @map("catalog_entry_id") @db.Uuid
+  catalogEntry                CatalogEntry? @relation(fields: [catalogEntryId], references: [id], onDelete: Restrict)
   /// Unique per owner, ignoring case (citext). Null on catalog-based connections.
-  displayName    String?       @map("display_name") @db.Citext
-  description    String?
-  url            String?
-  authType       AuthType?     @map("auth_type")
+  displayName                 String?       @map("display_name") @db.Citext
+  description                 String?
+  url                         String?
+  authType                    AuthType?     @map("auth_type")
   /// Only for API_KEY.
-  headerName     String?       @map("header_name")
+  headerName                  String?       @map("header_name")
   /// Only for API_KEY. May be empty.
-  headerPrefix   String?       @map("header_prefix")
-  enabled        Boolean       @default(true)
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  headerPrefix                String?       @map("header_prefix")
+  /// The API key, encrypted by SecretStore with the context
+  /// `connection:<id>:api_key` (REQ-CONN-041). For API_KEY connections,
+  /// custom or catalog-based.
+  apiKeyCiphertext            String?       @map("api_key_ciphertext")
+  apiKeyKeyId                 String?       @map("api_key_key_id")
+  /// Only for custom OAUTH_MANUAL connections. Not a secret.
+  oauthClientId               String?       @map("oauth_client_id")
+  /// Encrypted like the API key, with the context `connection:<id>:oauth_client_secret`.
+  oauthClientSecretCiphertext String?       @map("oauth_client_secret_ciphertext")
+  oauthClientSecretKeyId      String?       @map("oauth_client_secret_key_id")
+  enabled                     Boolean       @default(true)
+  createdAt                   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([ownerId, displayName])
   @@unique([ownerId, catalogEntryId])
