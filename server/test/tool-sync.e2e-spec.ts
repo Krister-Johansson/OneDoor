@@ -6,8 +6,11 @@ import {
   RedisContainer,
   type StartedRedisContainer,
 } from '@testcontainers/redis';
+import { type Client, createClient } from 'graphql-ws';
+import { Redis } from 'ioredis';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
+import { WebSocket } from 'ws';
 import { seed } from '../prisma/seed.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { UpstreamRegistryService } from '../src/services/upstreams/registry/upstream-registry.service.js';
@@ -17,10 +20,17 @@ import { startOpenTwin, type Twin } from './twins/mcp-twins.js';
 
 // The same image as docker-compose.yml.
 const REDIS_IMAGE = 'redis:8.8.4-alpine';
+const SYNCED_CHANNEL = 'onedoor:connection-tools-synced';
+
+interface SyncedEvent {
+  data?: { connectionToolsSynced: { id: string; toolCount: number } };
+  errors?: unknown[];
+}
 
 describe('tool sync (e2e)', () => {
   let postgres: StartedPostgreSqlContainer;
   let redis: StartedRedisContainer;
+  let inspector: Redis;
   let prisma: PrismaClient;
   let twin: Twin;
   let app: INestApplication<App>;
@@ -28,6 +38,8 @@ describe('tool sync (e2e)', () => {
   let meId: string;
   let otherId: string;
   let syncedId: string;
+  let wsUrl: string;
+  const clients: Client[] = [];
 
   async function graphql(query: string, variables: Record<string, unknown>) {
     const res = await request(app.getHttpServer())
@@ -65,12 +77,64 @@ describe('tool sync (e2e)', () => {
     });
   }
 
+  // Subscribes to connectionToolsSynced and waits until the server holds
+  // the Redis subscription, so no sync that finishes afterwards is missed.
+  async function subscribeToSyncs(): Promise<AsyncIterator<SyncedEvent>> {
+    const client = createClient({ url: wsUrl, webSocketImpl: WebSocket });
+    clients.push(client);
+    const events = client.iterate<SyncedEvent['data']>({
+      query: 'subscription { connectionToolsSynced { id toolCount } }',
+    }) as AsyncIterableIterator<SyncedEvent>;
+    // iterate() subscribes on the first next(); start it now.
+    let first: Promise<IteratorResult<SyncedEvent>> | undefined = events.next();
+    await vi.waitFor(
+      async () => {
+        const reply = (await inspector.pubsub('NUMSUB', SYNCED_CHANNEL)) as [
+          string,
+          number,
+        ];
+        expect(reply[1]).toBe(1);
+      },
+      { timeout: 5_000, interval: 20 },
+    );
+    return {
+      next: () => {
+        const pending = first ?? events.next();
+        first = undefined;
+        return pending;
+      },
+      return: async () => {
+        await events.return?.();
+        return { value: undefined, done: true };
+      },
+    };
+  }
+
+  // Reads events until one for `id`, and returns it with the ids of the
+  // events before it.
+  async function syncedEventFor(
+    events: AsyncIterator<SyncedEvent>,
+    id: string,
+  ) {
+    const otherIds: string[] = [];
+    while (true) {
+      const { value, done } = await events.next();
+      if (done) throw new Error('The subscription ended');
+      expect(value.errors).toBeUndefined();
+      const synced = value.data?.connectionToolsSynced;
+      if (!synced) throw new Error('An event without data');
+      if (synced.id === id) return { toolCount: synced.toolCount, otherIds };
+      otherIds.push(synced.id);
+    }
+  }
+
   beforeAll(async () => {
     [postgres, redis, twin] = await Promise.all([
       startMigratedPostgres(),
       new RedisContainer(REDIS_IMAGE).start(),
       startOpenTwin(),
     ]);
+    inspector = new Redis(redis.getConnectionUrl());
     prisma = new PrismaClient({
       adapter: new PrismaPg({ connectionString: postgres.getConnectionUri() }),
     });
@@ -89,12 +153,15 @@ describe('tool sync (e2e)', () => {
       imports: [AppModule],
     }).compile();
     app = moduleRef.createNestApplication();
-    await app.init();
+    await app.listen(0, '127.0.0.1');
+    wsUrl = `${(await app.getUrl()).replace(/^http/, 'ws')}/graphql`;
     registry = app.get(UpstreamRegistryService);
   }, 120_000);
 
   afterAll(async () => {
+    await Promise.allSettled(clients.map((client) => client.dispose()));
     await app?.close();
+    inspector?.disconnect();
     await prisma?.$disconnect();
     await Promise.allSettled([twin?.close(), redis?.stop(), postgres?.stop()]);
     vi.unstubAllEnvs();
@@ -118,6 +185,44 @@ describe('tool sync (e2e)', () => {
       { id: syncedId },
     );
     expect(body.data?.connection).toEqual({ toolCount: 2 });
+  });
+
+  it("sends the caller's connection with its new tool count when a sync finishes, and nothing of other owners", async () => {
+    await eventually(async () =>
+      expect(await toolsOf(syncedId)).toHaveLength(2),
+    );
+    const events = await subscribeToSyncs();
+
+    // Another owner's connection syncs first; its event is not sent.
+    const theirs = await prisma.connection.create({
+      data: {
+        ownerId: otherId,
+        displayName: 'Theirs, synced',
+        url: twin.url,
+        authType: 'NONE',
+      },
+    });
+    await registry.sync(theirs.id);
+    await eventually(async () =>
+      expect(await toolsOf(theirs.id)).toHaveLength(2),
+    );
+
+    // A re-sync stores the tool the server lists again.
+    await prisma.tool.deleteMany({
+      where: { connectionId: syncedId, name: 'reverse' },
+    });
+    expect((await resync(syncedId)).errors).toBeUndefined();
+    const synced = await syncedEventFor(events, syncedId);
+    expect(synced).toEqual({ toolCount: 2, otherIds: [] });
+
+    // A sync that changes nothing is sent too, so the web sees every
+    // re-sync end.
+    expect((await resync(syncedId)).errors).toBeUndefined();
+    expect(await syncedEventFor(events, syncedId)).toEqual({
+      toolCount: 2,
+      otherIds: [],
+    });
+    await events.return?.();
   });
 
   it('rewrites only changed tools, removes tools the server no longer lists, and keeps ids', async () => {
