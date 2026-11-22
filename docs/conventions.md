@@ -650,12 +650,42 @@ refreshConnectionInBackground(connectionId: string, url: string): void {
 
 - When the work writes its result back, the write checks that its input is still current, for example `updateMany({ where: { id, url } })`, so a slow run cannot overwrite a newer one.
 - Work at startup runs from `onApplicationBootstrap` without `await`, so startup does not block.
-- A config switch turns off work that reaches the network. `stubAppEnv()` turns it off, and the test of that feature turns it back on. `ICON_FETCHING` is the first.
+- A config switch turns off work that reaches the network. `stubAppEnv()` turns it off, and the test of that feature turns it back on. `ICON_FETCHING` and `UPSTREAM_CONNECTING` are the switches so far.
 - This holds until the job queue exists; queued work then moves to BullMQ.
 
 ### Files served from OneDoor's own origin
 
 Content that came from another host, such as icons, is stored and served by OneDoor, never linked. A route that serves it sets `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, and takes the content type from what OneDoor detected in the bytes.
+
+## Upstream clients
+
+Approved 2026-11-22.
+
+### The registry
+
+`UpstreamRegistryService` in `server/src/services/upstreams/registry/` owns every upstream MCP client. No other code opens a long-lived client. Probes and credential checks open a short-lived client of their own and close it.
+
+- One client per connection that is enabled, `READY` and has auth type `NONE`. Connections with credentials join when `UpstreamAuthProvider` exists.
+- `onApplicationBootstrap` starts a sync for every enabled connection without `await`. `onModuleDestroy` aborts and closes every client.
+- `client(connectionId)` returns the connected client, or `undefined` while it connects, after a failed connect, and when the connection should have none.
+- Clients connect through `GuardedFetch` with a 10 second connect timeout. One `AbortController` per client stops all of its requests when the client closes.
+- A failed connect is logged with the connection id and a fixed reason, and leaves no client. The next sync tries again.
+- `UPSTREAM_CONNECTING` turns the registry off. `stubAppEnv()` and the web e2e setup set it to `false`.
+
+### Following changes
+
+A service that writes a connection row calls the registry after the write, and returns without waiting:
+
+```ts
+await this.prisma.connection.update({ where: { id, ownerId }, data: { enabled } });
+this.registry.syncInBackground(id);
+```
+
+`sync(id)` reads the row again and decides: keep the client when the URL is the same, otherwise close it and open a new one when one is wanted. Syncs of one connection decide in the order they were asked for, so the last write wins. A sync never takes its input from the caller, only from the row.
+
+### Tests
+
+The registry test is `server/test/upstream-registry.e2e-spec.ts`. It sets `UPSTREAM_CONNECTING=true` and uses the open twin. It waits for a background change with `vi.waitFor` on `registry.client(id)`, and calls `await registry.sync(id)` where the test itself made the change.
 
 ## Web GraphQL client
 
