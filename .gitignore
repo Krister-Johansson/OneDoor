@@ -8,6 +8,11 @@ node_modules/
 
 # Build output and caches
 dist/
+# The server build the web flows run (web/e2e/global-setup.ts).
+server/.e2e-build/
+# Playwright output.
+web/test-results/
+web/playwright-report/
 coverage/
 *.tsbuildinfo
 
