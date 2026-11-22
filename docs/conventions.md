@@ -382,6 +382,8 @@ Name a check constraint `<table>_<rule>_check`. Never edit a migration after it 
 
 `prisma/seed.ts` creates the rows every environment needs, with `upsert` so it can run any number of times. It exports `seed(prisma)` for tests and runs itself only under `import.meta.main`. Run it with `pnpm prisma db seed`.
 
+The catalog of pre-installed servers is the `CATALOG` array in `prisma/seed.ts`. Each entry and auth option is upserted by its key and auth type; the seed never deletes one. Before adding or changing a catalog value (URL, auth type, header settings), check it against the vendor's current documentation and note the date in the comment above `CATALOG`. Secrets, such as OAuth client details, never go in the seed; they come from server config.
+
 ### Database tests against the migrations
 
 A test that needs the real schema starts its database with `startMigratedPostgres()` from `server/test/support/database.ts`, which runs `prisma migrate deploy` on a Testcontainers Postgres. Call `seed(prisma)` when the test needs the seeded rows.

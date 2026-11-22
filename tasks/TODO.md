@@ -18,12 +18,12 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T07 GraphQL setup and the `connections` query. Apollo code-first, `server/schema.gql` with a drift test, `CallerGuard` attaching `me`, `connections` and `connection(id)` filtered by owner, and GraphQL error codes from `DomainErrorFilter`.
 - [x] T08 Secret storage. `SecretStore` with `AesGcmSecretStore` (AES-256-GCM, context as associated data), the `crypto` config namespace, and the factory binding in `CryptoModule`.
 - [x] T09 Custom connections. `createConnection`, `updateConnection`, `setConnectionEnabled` and `removeConnection`, class-validator inputs with a global `ValidationPipe`, and API keys and client secrets encrypted with `SecretStore` (migration `20261122000306_connection_secrets`).
+- [x] T10 Catalog. Catalog entries with auth options, GitHub (API key) and Context7 (OAuth with DCR, or API key) in the seed, the `catalog` query, `switchOnCatalogEntry`, and API keys for catalog-based connections (migration `20261122002230_catalog_auth_options`).
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T10 Catalog. Catalog entries with auth options (spec change: an entry offers one option per auth type), the seed for GitHub (API key) and Context7 (OAuth with DCR, or API key), the `catalog` query, `switchOnCatalogEntry`, and the API key of a catalog-based connection. Covers REQ-CONN-010 to 013. Human review: migration, credential handling.
 - [ ] T11 Probe and credentials check. `probeServer` and `checkCredentials`, with the network rules for fetching. Covers REQ-CONN-060 to 063. Human review: fetching user-supplied URLs.
 - [ ] T12 Server icons. MCP `icons`, then the favicon, then a generated letter icon; stored and served from our origin. Covers REQ-CONN-070 and 071. Human review: fetching upstream URLs.
 - [ ] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql`, a `codegen` script, and a codegen drift check in web `verify`. Checkpoint: codegen setup.
