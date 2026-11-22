@@ -1,27 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { AuthType } from '../../../generated/prisma/enums.js';
 import { ConnectionModel } from '../../connections/models/connection.model.js';
-
-@ObjectType('CatalogAuthOption', {
-  description:
-    'One way to connect to a catalog entry: an auth type with its URL (REQ-CONN-010).',
-})
-export class CatalogAuthOptionModel {
-  @Field(() => AuthType)
-  authType: AuthType;
-
-  @Field()
-  url: string;
-
-  @Field(() => String, { nullable: true, description: 'Only for API_KEY.' })
-  headerName: string | null;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'Only for API_KEY. May be empty.',
-  })
-  headerPrefix: string | null;
-}
+import { CatalogAuthOptionModel } from './catalog-auth-option.model.js';
 
 @ObjectType('CatalogEntry', {
   description: 'A pre-installed server that the caller can switch on.',

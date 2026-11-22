@@ -1,15 +1,11 @@
-import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 import type { Caller } from '../../caller/caller.js';
 import { CurrentCaller } from '../../caller/current-caller.decorator.js';
 import { ConnectionsService } from './connections.service.js';
-import {
-  CreateConnectionInput,
-  UpdateConnectionInput,
-} from './inputs/create-connection.input.js';
 import { ConnectionModel } from './models/connection.model.js';
 
 @Resolver(() => ConnectionModel)
-export class ConnectionResolver {
+export class ConnectionsQuery {
   constructor(private readonly connectionsService: ConnectionsService) {}
 
   @Query(() => [ConnectionModel], {
@@ -27,48 +23,5 @@ export class ConnectionResolver {
     @Args('id', { type: () => ID }) id: string,
   ): Promise<ConnectionModel> {
     return this.connectionsService.getForOwner(caller.userId, id);
-  }
-
-  @Mutation(() => ConnectionModel, {
-    description: 'Adds a custom server (REQ-CONN-020).',
-  })
-  createConnection(
-    @CurrentCaller() caller: Caller,
-    @Args('input') input: CreateConnectionInput,
-  ): Promise<ConnectionModel> {
-    return this.connectionsService.create(caller.userId, input);
-  }
-
-  @Mutation(() => ConnectionModel, {
-    description: 'Changes a custom server (REQ-CONN-023, REQ-CONN-042).',
-  })
-  updateConnection(
-    @CurrentCaller() caller: Caller,
-    @Args('id', { type: () => ID }) id: string,
-    @Args('input') input: UpdateConnectionInput,
-  ): Promise<ConnectionModel> {
-    return this.connectionsService.update(caller.userId, id, input);
-  }
-
-  @Mutation(() => ConnectionModel, {
-    description: 'Enables or disables a connection (REQ-CONN-051).',
-  })
-  setConnectionEnabled(
-    @CurrentCaller() caller: Caller,
-    @Args('id', { type: () => ID }) id: string,
-    @Args('enabled') enabled: boolean,
-  ): Promise<ConnectionModel> {
-    return this.connectionsService.setEnabled(caller.userId, id, enabled);
-  }
-
-  @Mutation(() => ID, {
-    description:
-      'Removes a connection with its credentials, and returns its id (REQ-CONN-052).',
-  })
-  removeConnection(
-    @CurrentCaller() caller: Caller,
-    @Args('id', { type: () => ID }) id: string,
-  ): Promise<string> {
-    return this.connectionsService.remove(caller.userId, id);
   }
 }

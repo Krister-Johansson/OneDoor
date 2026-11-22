@@ -20,6 +20,8 @@ import type { CheckCredentialsInput } from './inputs/check-credentials.input.js'
 import {
   type CredentialsCheckModel,
   CredentialsStatus,
+} from './models/credentials-check.model.js';
+import {
   type ProbeResultModel,
   ProbeStatus,
 } from './models/probe-result.model.js';

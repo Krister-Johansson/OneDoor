@@ -20,10 +20,8 @@ import {
   DEFAULT_HEADER_NAME,
   DEFAULT_HEADER_PREFIX,
 } from './connection-rules.js';
-import type {
-  CreateConnectionInput,
-  UpdateConnectionInput,
-} from './inputs/create-connection.input.js';
+import type { CreateConnectionInput } from './inputs/create-connection.input.js';
+import type { UpdateConnectionInput } from './inputs/update-connection.input.js';
 import type { ConnectionModel } from './models/connection.model.js';
 
 // The columns that hold credentials, as the service writes them.
