@@ -411,17 +411,43 @@ In tests, load `graphql` with `createRequire(import.meta.url)('graphql')` when t
 
 ### Files per feature
 
-A feature's GraphQL files sit in its module folder, generated with the Nest CLI and then filled in:
+Approved 2026-11-22. Each feature has its own folder inside its module, with GraphQL classes split by kind:
 
-```bash
-pnpm exec nest g class upstreams/connection.model --flat --no-spec
-pnpm exec nest g service upstreams/connections --flat --no-spec
-pnpm exec nest g resolver upstreams/connection --flat --no-spec
+```text
+server/src/upstreams/
+├── upstreams.module.ts
+└── connections/
+    ├── connections.query.ts       ConnectionsQuery: @Query methods
+    ├── connections.mutation.ts    ConnectionsMutation: @Mutation methods
+    ├── connections.service.ts
+    ├── connection.mapper.ts
+    ├── connection-rules.ts (+ .spec.ts)
+    ├── inputs/
+    │   ├── create-connection.input.ts
+    │   └── update-connection.input.ts
+    └── models/
+        └── connection.model.ts
 ```
 
-- `<name>.model.ts`: the `@ObjectType('<Name>')` class, named `<Name>Model` in TypeScript. Every field has `@Field`; nullable and enum fields give their type, as in `@Field(() => String, { nullable: true })`. Describe fields that are not obvious, and name the requirement.
-- `<names>.service.ts`: the logic. It reads with Prisma, catches with `toDomainError`, and maps rows to models in a function at the bottom of the file. It never returns a Prisma type.
-- `<name>.resolver.ts`: one method per query or mutation, each with a `description`. Methods only delegate to the service.
+Generate the files with the Nest CLI, then fill them in. `nest g class` names the class after the file, so `connections.query` becomes `ConnectionsQuery`:
+
+```bash
+pnpm exec nest g class upstreams/connections/models/connection.model --flat --no-spec
+pnpm exec nest g class upstreams/connections/inputs/create-connection.input --flat --no-spec
+pnpm exec nest g service upstreams/connections/connections --flat --no-spec
+pnpm exec nest g class upstreams/connections/connections.query --flat --no-spec
+pnpm exec nest g class upstreams/connections/connections.mutation --flat --no-spec
+```
+
+- One class per file. An enum lives in the file of the model that uses it.
+- `models/<name>.model.ts`: the `@ObjectType('<Name>')` class, named `<Name>Model` in TypeScript. Every field has `@Field`; nullable and enum fields give their type, as in `@Field(() => String, { nullable: true })`. Describe fields that are not obvious, and name the requirement.
+- `inputs/<name>.input.ts` (`@InputType`) and `inputs/<name>.args.ts` (`@ArgsType`).
+- `<feature>.query.ts`: `@Resolver(() => <Name>Model) class <Feature>Query` with only `@Query` methods. `<feature>.mutation.ts` is the same for `@Mutation`, and `<feature>.subscription.ts` for `@Subscription`. A feature without queries has no query file. A resolver with no object type, such as `ProbeMutation`, uses `@Resolver()`.
+- `<name>.resolver.ts` holds only `@ResolveField` methods of an object type. Generate it with `nest g resolver <path> --flat --no-spec`.
+- Every query, mutation and subscription has a `description`. Methods only delegate to the service.
+- `<feature>.service.ts`: the logic. It reads with Prisma, catches with `toDomainError`, and maps rows to models (in the service or in `<name>.mapper.ts`). It never returns a Prisma type.
+- A feature folder may import another feature's models and rules, as `catalog/` imports `ConnectionModel`.
+- Register every resolver class in the module's `providers`.
 
 Register a Prisma enum for GraphQL with `registerEnumType` in the model file.
 
@@ -511,11 +537,11 @@ Approved 2026-11-22.
 
 ### Input classes
 
-`<name>.input.ts` holds `Create<Name>Input` and `Update<Name>Input`, both `@InputType` with a `description`. Every field has `@Field` and class-validator decorators:
+`inputs/create-<name>.input.ts` holds `Create<Name>Input`, and `inputs/update-<name>.input.ts` holds `Update<Name>Input`. Both are `@InputType` with a `description`. Every field has `@Field` and class-validator decorators:
 
-- A required string: `@IsString()` and a length rule. Trim names with `@Transform(trim)`.
+- A required string: `@IsString()` and a length rule. Trim names with `@Trim()` from the feature's rules file.
 - An optional field that may be null: `@IsOptional()`.
-- An update field that may be left out but not set to null: `ValidateIf((_o, v) => v !== undefined)` before the rules.
+- An update field that may be left out but not set to null: `@IfGiven()` before the rules.
 - A rule that needs code lives in `<name>-rules.ts` as a function that returns the problem as text, or null, plus a decorator made with `registerDecorator`. The message never repeats the value. Test the functions in `<name>-rules.spec.ts`.
 
 Rules that compare fields (one field required when another has a value) live in the service and throw `ValidationError`.
