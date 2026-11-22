@@ -854,9 +854,30 @@ web/src/
 
 - File names are kebab-case. A screen's components live in `src/components/<screen>/`.
 - `/` redirects to `/servers` in `beforeLoad`.
-- The route component renders the page frame (`<main>`, `<h1>`) and the sections. A section reads its data through hooks; the route passes no data down.
+- The route component renders the page's content frame (a `<div>` with the page padding, and the `<h1>`) and the sections. The app shell provides `<main>`. A section reads its data through hooks; the route passes no data down.
 - Each route sets its title in `head`: `"<Screen> · OneDoor"`.
 - Layout works at 375 px with no horizontal scroll: `p-4 sm:p-8` on the page, and rows that wrap.
+
+### App shell
+
+Approved 2026-11-22.
+
+The root route (`src/routes/__root.tsx`) renders the shell around every screen:
+
+```text
+<TooltipProvider>
+  <SidebarProvider>
+    <AppSidebar />                  src/components/app-sidebar.tsx
+    <SidebarInset>                  renders <main>
+      <header>                      SidebarTrigger, Separator, "OneDoor"
+      {children}                    the route's page
+```
+
+- A new screen gets a sidebar link by adding one entry to `SCREENS` in `app-sidebar.tsx`: `{ to, label, icon }`, with a `lucide-react` icon.
+- A link is active when `useMatchRoute()` matches its `to` with `fuzzy: true`, so nested routes keep their screen highlighted.
+- Every link calls `setOpenMobile(false)` on click, so the sheet closes after navigation on narrow screens.
+- The sidebar uses `collapsible="icon"`. Each menu button sets `tooltip` to its label, which shows while the sidebar is collapsed.
+- The sidebar does not remember collapsed or open across reloads.
 
 ### Query hooks
 
@@ -927,7 +948,7 @@ Forms use TanStack Form (`@tanstack/react-form`) with shadcn's `Field` component
 ### shadcn components
 
 - Add components with `pnpm dlx shadcn@latest add <component> --yes`. They are committed in `src/components/ui/` and may be edited. When the CLI asks to overwrite an existing component, answer no (`printf 'n\n' | pnpm dlx shadcn@latest add ...`).
-- An edit to a generated component carries a comment that says why. `ItemGroup` in `item.tsx` renders a `<ul>` for Biome's `useSemanticElements` rule, and items in it use `render={<li />}`.
+- An edit to a generated component carries a comment that says why. `ItemGroup` in `item.tsx` renders a `<ul>` for Biome's `useSemanticElements` rule, and items in it use `render={<li />}`. `sidebar.tsx` has no cookie write for the open state, because nothing read the cookie and Biome's `noDocumentCookie` rule refuses the write.
 - Icons from the server are rendered with `<img src={iconUrl} alt="">`, never inlined.
 
 ## Web end-to-end tests
