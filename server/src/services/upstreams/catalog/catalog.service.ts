@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import type { CatalogEntryModel } from '../../../api/graphql/catalog/models/catalog-entry.model.js';
-import type { ConnectionModel } from '../../../api/graphql/connections/models/connection.model.js';
 import {
   ConflictError,
   NotFoundError,
@@ -11,10 +9,12 @@ import type { AuthType } from '../../../generated/prisma/enums.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { toDomainError } from '../../../prisma/prisma-error.mapper.js';
 import { iconPath } from '../../icons/icons.service.js';
+import type { Connection } from '../connections/connection.interface.js';
 import {
   CONNECTION_INCLUDE,
-  toConnectionModel,
+  toConnection,
 } from '../connections/connection.mapper.js';
+import type { CatalogEntry } from './catalog-entry.interface.js';
 
 @Injectable()
 export class CatalogService {
@@ -22,7 +22,7 @@ export class CatalogService {
 
   // REQ-CONN-011: every entry, sorted by display name, with its auth options
   // and the owner's connection for it.
-  async listForOwner(ownerId: string): Promise<CatalogEntryModel[]> {
+  async listForOwner(ownerId: string): Promise<CatalogEntry[]> {
     try {
       const entries = await this.prisma.catalogEntry.findMany({
         orderBy: { displayName: 'asc' },
@@ -44,7 +44,7 @@ export class CatalogService {
           headerPrefix: option.headerPrefix,
         })),
         connection: entry.connections[0]
-          ? toConnectionModel(entry.connections[0])
+          ? toConnection(entry.connections[0])
           : null,
       }));
     } catch (error) {
@@ -59,7 +59,7 @@ export class CatalogService {
     ownerId: string,
     catalogEntryId: string,
     authType: AuthType,
-  ): Promise<ConnectionModel> {
+  ): Promise<Connection> {
     if (!z.uuid().safeParse(catalogEntryId).success) {
       throw new NotFoundError('Catalog entry not found');
     }
@@ -101,7 +101,7 @@ export class CatalogService {
           data: { ownerId, catalogEntryId, catalogAuthOptionId: option.id },
           include: CONNECTION_INCLUDE,
         });
-        return toConnectionModel(created);
+        return toConnection(created);
       }
 
       const sameOption = existing.catalogAuthOptionId === option.id;
@@ -117,7 +117,7 @@ export class CatalogService {
             },
         include: CONNECTION_INCLUDE,
       });
-      return toConnectionModel(updated);
+      return toConnection(updated);
     } catch (error) {
       throw toDomainError(error, 'Connection');
     }

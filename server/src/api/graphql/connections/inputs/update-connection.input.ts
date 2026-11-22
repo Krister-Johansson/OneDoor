@@ -7,19 +7,20 @@ import {
   MaxLength,
 } from 'class-validator';
 import { AuthType } from '../../../../generated/prisma/enums.js';
+import type { UpdateConnectionData } from '../../../../services/upstreams/connections/connection.interface.js';
 import {
   HasNoControlCharacters,
   IfGiven,
   IsHeaderName,
   IsServerUrl,
   Trim,
-} from '../../../../services/upstreams/connections/connection-rules.js';
+} from '../../../validation/validators.js';
 
 @InputType({
   description:
     'Changes to a custom server. A field left out keeps its value. Changing the url or authType deletes the stored credentials unless the same input sets new ones (REQ-CONN-023).',
 })
-export class UpdateConnectionInput {
+export class UpdateConnectionInput implements UpdateConnectionData {
   @Field(() => String, { nullable: true })
   @IfGiven()
   @Trim()

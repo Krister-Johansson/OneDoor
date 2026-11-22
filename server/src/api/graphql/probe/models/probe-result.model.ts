@@ -1,14 +1,9 @@
 import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { AuthType } from '../../../../generated/prisma/enums.js';
-
-export const ProbeStatus = {
-  MCP_SERVER: 'MCP_SERVER',
-  AUTH_REQUIRED: 'AUTH_REQUIRED',
-  NOT_MCP: 'NOT_MCP',
-  UNREACHABLE: 'UNREACHABLE',
-  REFUSED: 'REFUSED',
-} as const;
-export type ProbeStatus = (typeof ProbeStatus)[keyof typeof ProbeStatus];
+import {
+  type ProbeResult,
+  ProbeStatus,
+} from '../../../../services/upstreams/probe/probe.interface.js';
 
 registerEnumType(ProbeStatus, {
   name: 'ProbeStatus',
@@ -19,7 +14,7 @@ registerEnumType(ProbeStatus, {
 @ObjectType('ProbeResult', {
   description: 'What a server shows without credentials (REQ-CONN-060).',
 })
-export class ProbeResultModel {
+export class ProbeResultModel implements ProbeResult {
   @Field(() => ProbeStatus)
   status: ProbeStatus;
 

@@ -8,15 +8,6 @@ import {
   UnauthorizedError,
 } from '@modelcontextprotocol/client';
 import { Injectable } from '@nestjs/common';
-import type { CheckCredentialsInput } from '../../../api/graphql/probe/inputs/check-credentials.input.js';
-import {
-  type CredentialsCheckModel,
-  CredentialsStatus,
-} from '../../../api/graphql/probe/models/credentials-check.model.js';
-import {
-  type ProbeResultModel,
-  ProbeStatus,
-} from '../../../api/graphql/probe/models/probe-result.model.js';
 import { ValidationError } from '../../../errors/domain-errors.js';
 import { AuthType } from '../../../generated/prisma/enums.js';
 import {
@@ -28,6 +19,13 @@ import {
   DEFAULT_HEADER_NAME,
   DEFAULT_HEADER_PREFIX,
 } from '../connections/connection-rules.js';
+import {
+  type CheckCredentialsData,
+  type CredentialsCheck,
+  CredentialsStatus,
+  type ProbeResult,
+  ProbeStatus,
+} from './probe.interface.js';
 
 export const PROBE_TIMEOUT_MS = 10_000;
 const CLIENT_INFO = { name: 'onedoor', version: '0.0.1' };
@@ -53,7 +51,7 @@ export class ProbeService {
   constructor(private readonly guardedFetch: GuardedFetch) {}
 
   // REQ-CONN-060 and REQ-CONN-061. Stores nothing.
-  async probe(url: string): Promise<ProbeResultModel> {
+  async probe(url: string): Promise<ProbeResult> {
     assertUrl(url);
     const deadline = AbortSignal.timeout(PROBE_TIMEOUT_MS);
     const probeFetch = this.probeFetch(deadline);
@@ -110,8 +108,8 @@ export class ProbeService {
   // REQ-CONN-062. Connects with the entered credentials, lists the tools,
   // and stores nothing.
   async checkCredentials(
-    input: CheckCredentialsInput,
-  ): Promise<CredentialsCheckModel> {
+    input: CheckCredentialsData,
+  ): Promise<CredentialsCheck> {
     assertUrl(input.url);
     const headers: Record<string, string> = {};
     let sensitiveHeaders: string[] = [];
@@ -186,7 +184,7 @@ export class ProbeService {
   private async authRequired(
     url: string,
     probeFetch: ProbeFetch,
-  ): Promise<ProbeResultModel> {
+  ): Promise<ProbeResult> {
     let oauth = false;
     let oauthDcr = false;
     try {
@@ -241,7 +239,7 @@ function assertUrl(url: string): void {
   if (problem) throw new ValidationError(problem);
 }
 
-function emptyProbe(): ProbeResultModel {
+function emptyProbe(): ProbeResult {
   return {
     status: ProbeStatus.NOT_MCP,
     message: '',

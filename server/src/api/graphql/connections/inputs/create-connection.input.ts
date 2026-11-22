@@ -7,15 +7,16 @@ import {
   MaxLength,
 } from 'class-validator';
 import { AuthType } from '../../../../generated/prisma/enums.js';
+import type { CreateConnectionData } from '../../../../services/upstreams/connections/connection.interface.js';
 import {
   HasNoControlCharacters,
   IsHeaderName,
   IsServerUrl,
   Trim,
-} from '../../../../services/upstreams/connections/connection-rules.js';
+} from '../../../validation/validators.js';
 
 @InputType({ description: 'A custom server to add (REQ-CONN-020).' })
-export class CreateConnectionInput {
+export class CreateConnectionInput implements CreateConnectionData {
   @Field({
     description: '1 to 60 characters, unique per user ignoring case.',
   })

@@ -1,11 +1,12 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
+import type { CatalogEntry } from '../../../../services/upstreams/catalog/catalog-entry.interface.js';
 import { ConnectionModel } from '../../connections/models/connection.model.js';
 import { CatalogAuthOptionModel } from './catalog-auth-option.model.js';
 
 @ObjectType('CatalogEntry', {
   description: 'A pre-installed server that the caller can switch on.',
 })
-export class CatalogEntryModel {
+export class CatalogEntryModel implements CatalogEntry {
   @Field(() => ID)
   id: string;
 

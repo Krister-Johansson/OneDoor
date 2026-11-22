@@ -1,13 +1,9 @@
 import { Field, ID, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { AuthType } from '../../../../generated/prisma/enums.js';
-
-// REQ-CONN-044. OAuth tokens are not stored yet, so OAuth connections stay
-// NEEDS_CREDENTIALS until the OAuth flows exist.
-export const SetupState = {
-  NEEDS_CREDENTIALS: 'NEEDS_CREDENTIALS',
-  READY: 'READY',
-} as const;
-export type SetupState = (typeof SetupState)[keyof typeof SetupState];
+import {
+  type Connection,
+  SetupState,
+} from '../../../../services/upstreams/connections/connection.interface.js';
 
 registerEnumType(SetupState, {
   name: 'SetupState',
@@ -24,7 +20,7 @@ registerEnumType(AuthType, {
   description:
     "A user's link to one MCP server. A catalog-based connection shows its catalog entry's name, description, URL, auth type and header settings.",
 })
-export class ConnectionModel {
+export class ConnectionModel implements Connection {
   @Field(() => ID)
   id: string;
 

@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import type { CreateConnectionInput } from '../../../api/graphql/connections/inputs/create-connection.input.js';
-import type { UpdateConnectionInput } from '../../../api/graphql/connections/inputs/update-connection.input.js';
-import type { ConnectionModel } from '../../../api/graphql/connections/models/connection.model.js';
 import { SecretStore } from '../../../crypto/secret-store.js';
 import {
   ConflictError,
@@ -14,10 +11,15 @@ import { AuthType } from '../../../generated/prisma/enums.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { toDomainError } from '../../../prisma/prisma-error.mapper.js';
 import { IconRefreshService } from '../icon-refresh/icon-refresh.service.js';
+import type {
+  Connection,
+  CreateConnectionData,
+  UpdateConnectionData,
+} from './connection.interface.js';
 import {
   CONNECTION_INCLUDE,
   type ConnectionRow,
-  toConnectionModel,
+  toConnection,
 } from './connection.mapper.js';
 import {
   DEFAULT_HEADER_NAME,
@@ -47,7 +49,7 @@ export class ConnectionsService {
   ) {}
 
   // The owner's connections, sorted by display name, ignoring case.
-  async listForOwner(ownerId: string): Promise<ConnectionModel[]> {
+  async listForOwner(ownerId: string): Promise<Connection[]> {
     let rows: ConnectionRow[];
     try {
       rows = await this.prisma.connection.findMany({
@@ -57,7 +59,7 @@ export class ConnectionsService {
     } catch (error) {
       throw toDomainError(error, 'Connection');
     }
-    return rows.map(toConnectionModel).sort((a, b) =>
+    return rows.map(toConnection).sort((a, b) =>
       a.displayName.localeCompare(b.displayName, 'en', {
         sensitivity: 'base',
       }),
@@ -66,15 +68,15 @@ export class ConnectionsService {
 
   // One of the owner's connections. Another owner's connection, and an id
   // that is not a UUID, are not found (REQ-CONN-001).
-  async getForOwner(ownerId: string, id: string): Promise<ConnectionModel> {
-    return toConnectionModel(await this.findRow(ownerId, id));
+  async getForOwner(ownerId: string, id: string): Promise<Connection> {
+    return toConnection(await this.findRow(ownerId, id));
   }
 
   // REQ-CONN-020 to REQ-CONN-022 and REQ-CONN-040 to REQ-CONN-043.
   async create(
     ownerId: string,
-    input: CreateConnectionInput,
-  ): Promise<ConnectionModel> {
+    input: CreateConnectionData,
+  ): Promise<Connection> {
     if (input.authType === AuthType.API_KEY && !input.apiKey) {
       throw new ValidationError('apiKey is required for API_KEY');
     }
@@ -122,7 +124,7 @@ export class ConnectionsService {
         });
       });
       this.iconRefresh.refreshConnectionInBackground(row.id, input.url);
-      return toConnectionModel(row);
+      return toConnection(row);
     } catch (error) {
       throw toDomainError(error, 'Connection');
     }
@@ -133,8 +135,8 @@ export class ConnectionsService {
   async update(
     ownerId: string,
     id: string,
-    input: UpdateConnectionInput,
-  ): Promise<ConnectionModel> {
+    input: UpdateConnectionData,
+  ): Promise<Connection> {
     const row = await this.findRow(ownerId, id);
     if (row.catalogAuthOption !== null) {
       return this.updateCatalogCredentials(
@@ -198,7 +200,7 @@ export class ConnectionsService {
       if (urlChanged && input.url !== undefined) {
         this.iconRefresh.refreshConnectionInBackground(row.id, input.url);
       }
-      return toConnectionModel(updated);
+      return toConnection(updated);
     } catch (error) {
       throw toDomainError(error, 'Connection');
     }
@@ -209,7 +211,7 @@ export class ConnectionsService {
     ownerId: string,
     id: string,
     enabled: boolean,
-  ): Promise<ConnectionModel> {
+  ): Promise<Connection> {
     assertUuid(id);
     try {
       const row = await this.prisma.connection.update({
@@ -217,7 +219,7 @@ export class ConnectionsService {
         data: { enabled },
         include: CONNECTION_INCLUDE,
       });
-      return toConnectionModel(row);
+      return toConnection(row);
     } catch (error) {
       throw toDomainError(error, 'Connection');
     }
@@ -240,8 +242,8 @@ export class ConnectionsService {
     ownerId: string,
     row: ConnectionRow,
     authType: AuthType,
-    input: UpdateConnectionInput,
-  ): Promise<ConnectionModel> {
+    input: UpdateConnectionData,
+  ): Promise<Connection> {
     const { apiKey, ...others } = input;
     if (Object.values(others).some((value) => value !== undefined)) {
       throw new ValidationError(
@@ -262,7 +264,7 @@ export class ConnectionsService {
         },
         include: CONNECTION_INCLUDE,
       });
-      return toConnectionModel(updated);
+      return toConnection(updated);
     } catch (error) {
       throw toDomainError(error, 'Connection');
     }

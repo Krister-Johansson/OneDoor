@@ -1,14 +1,8 @@
 import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
-
-export const CredentialsStatus = {
-  OK: 'OK',
-  REFUSED_CREDENTIALS: 'REFUSED_CREDENTIALS',
-  NOT_MCP: 'NOT_MCP',
-  UNREACHABLE: 'UNREACHABLE',
-  REFUSED: 'REFUSED',
-} as const;
-export type CredentialsStatus =
-  (typeof CredentialsStatus)[keyof typeof CredentialsStatus];
+import {
+  type CredentialsCheck,
+  CredentialsStatus,
+} from '../../../../services/upstreams/probe/probe.interface.js';
 
 registerEnumType(CredentialsStatus, {
   name: 'CredentialsStatus',
@@ -19,7 +13,7 @@ registerEnumType(CredentialsStatus, {
 @ObjectType('CredentialsCheck', {
   description: 'The result of connecting with credentials (REQ-CONN-062).',
 })
-export class CredentialsCheckModel {
+export class CredentialsCheckModel implements CredentialsCheck {
   @Field(() => CredentialsStatus)
   status: CredentialsStatus;
 

@@ -1,25 +1,23 @@
-import {
-  type ConnectionModel,
-  SetupState,
-} from '../../../api/graphql/connections/models/connection.model.js';
 import { InternalError } from '../../../errors/domain-errors.js';
+// Prisma's row types, named apart from the service's own types.
 import type {
-  CatalogAuthOption,
-  CatalogEntry,
-  Connection,
+  CatalogAuthOption as CatalogAuthOptionRecord,
+  CatalogEntry as CatalogEntryRecord,
+  Connection as ConnectionRecord,
 } from '../../../generated/prisma/client.js';
 import { AuthType } from '../../../generated/prisma/enums.js';
 import { iconPath } from '../../icons/icons.service.js';
+import { type Connection, SetupState } from './connection.interface.js';
 
-// Every query that maps to ConnectionModel loads these relations.
+// Every query that maps to Connection loads these relations.
 export const CONNECTION_INCLUDE = {
   catalogEntry: true,
   catalogAuthOption: true,
 } as const;
 
-export type ConnectionRow = Connection & {
-  catalogEntry: CatalogEntry | null;
-  catalogAuthOption: CatalogAuthOption | null;
+export type ConnectionRow = ConnectionRecord & {
+  catalogEntry: CatalogEntryRecord | null;
+  catalogAuthOption: CatalogAuthOptionRecord | null;
 };
 
 // REQ-CONN-044.
@@ -42,7 +40,7 @@ export function setupStateOf(
 // entry, and its URL, auth type and header settings from the auth option
 // (REQ-CONN-012). The check constraint connection_catalog_or_custom_check
 // guarantees that each field has exactly one source.
-export function toConnectionModel(row: ConnectionRow): ConnectionModel {
+export function toConnection(row: ConnectionRow): Connection {
   const displayName = row.catalogEntry?.displayName ?? row.displayName;
   const settings = row.catalogAuthOption ?? row;
   const { url, authType } = settings;

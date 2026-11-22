@@ -1,17 +1,18 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import { AuthType } from '../../../../generated/prisma/enums.js';
+import type { CheckCredentialsData } from '../../../../services/upstreams/probe/probe.interface.js';
 import {
   HasNoControlCharacters,
   IsHeaderName,
   IsServerUrl,
-} from '../../../../services/upstreams/connections/connection-rules.js';
+} from '../../../validation/validators.js';
 
 @InputType({
   description:
     'Credentials to check before saving (REQ-CONN-062). Nothing is stored.',
 })
-export class CheckCredentialsInput {
+export class CheckCredentialsInput implements CheckCredentialsData {
   @Field()
   @IsServerUrl()
   url: string;
