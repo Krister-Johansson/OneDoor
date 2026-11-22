@@ -33,3 +33,29 @@ mutation CreateConnection($input: CreateConnectionInput!) {
     id
   }
 }
+
+# Changes a custom server (REQ-CONN-023, REQ-CONN-042). Selects every field
+# the Connections query has, so Apollo updates the cached connection by id.
+mutation UpdateConnection($id: ID!, $input: UpdateConnectionInput!) {
+  updateConnection(id: $id, input: $input) {
+    id
+    catalogEntryId
+    displayName
+    description
+    url
+    authType
+    headerName
+    headerPrefix
+    hasApiKey
+    oauthClientId
+    hasClientSecret
+    setupState
+    iconUrl
+    enabled
+  }
+}
+
+# Removes a connection with its credentials (REQ-CONN-052).
+mutation RemoveConnection($id: ID!) {
+  removeConnection(id: $id)
+}

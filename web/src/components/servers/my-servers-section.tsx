@@ -1,6 +1,5 @@
 import { ServerIcon } from "lucide-react"
 import { useState } from "react"
-import { Badge } from "#/components/ui/badge"
 import { Button } from "#/components/ui/button"
 import {
   Empty,
@@ -10,18 +9,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "#/components/ui/empty"
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "#/components/ui/item"
+import { ItemGroup } from "#/components/ui/item"
 import { useConnections } from "#/hooks/use-connections"
-import { AUTH_TYPE_LABELS } from "#/lib/auth-type"
 import { AddServerDialog } from "./add-server-dialog"
+import { MyServerRow } from "./my-server-row"
 
 // The caller's custom servers, sorted by display name (REQ-CONN-080).
 export function MyServersSection() {
@@ -61,29 +52,7 @@ export function MyServersSection() {
       ) : (
         <ItemGroup>
           {custom.map((connection) => (
-            <Item key={connection.id} variant="outline" render={<li />}>
-              <ItemMedia variant="image">
-                <img src={connection.iconUrl} alt="" />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{connection.displayName}</ItemTitle>
-                <ItemDescription>{connection.url}</ItemDescription>
-              </ItemContent>
-              <ItemActions className="flex-wrap">
-                <Badge variant="secondary">
-                  {AUTH_TYPE_LABELS[connection.authType]}
-                </Badge>
-                <Badge variant={connection.enabled ? "default" : "outline"}>
-                  {connection.enabled ? "Enabled" : "Disabled"}
-                </Badge>
-                <Button variant="outline" size="sm" disabled>
-                  Edit
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                  Remove
-                </Button>
-              </ItemActions>
-            </Item>
+            <MyServerRow key={connection.id} connection={connection} />
           ))}
         </ItemGroup>
       )}
