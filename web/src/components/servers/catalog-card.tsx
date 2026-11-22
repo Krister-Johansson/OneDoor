@@ -13,6 +13,7 @@ import { useSetConnectionEnabled } from "#/hooks/use-set-connection-enabled"
 import { useSwitchOnCatalogEntry } from "#/hooks/use-switch-on-catalog-entry"
 import { errorCode } from "#/lib/graphql-error"
 import { AuthOptionDialog } from "./auth-option-dialog"
+import { ConnectionStatusBadge } from "./connection-status-badge"
 
 type CatalogEntry = CatalogQuery["catalog"][number]
 
@@ -76,6 +77,7 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
         {connection?.setupState === "NEEDS_CREDENTIALS" && (
           <Badge variant="outline">Needs credentials</Badge>
         )}
+        {connection && <ConnectionStatusBadge status={connection.status} />}
         {error && (
           <p role="alert" className="text-destructive text-sm">
             {error}

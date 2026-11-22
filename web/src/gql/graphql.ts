@@ -24,6 +24,9 @@ export type CheckCredentialsInput = {
   url: string
 }
 
+/** The state of a connection's upstream client. OFF: no client is wanted (disabled, not READY, or an auth type without a client yet). FAILED: the last connect failed, until the next change to the connection. */
+export type ConnectionStatus = "CONNECTED" | "CONNECTING" | "FAILED" | "OFF"
+
 /** A custom server to add (REQ-CONN-020). */
 export type CreateConnectionInput = {
   /** Required for API_KEY, and only for it. Write-only. */
@@ -96,6 +99,7 @@ export type CatalogQuery = {
       authType: AuthType
       setupState: SetupState
       enabled: boolean
+      status: ConnectionStatus
     } | null
   }>
 }
@@ -112,6 +116,7 @@ export type SwitchOnCatalogEntryMutation = {
     authType: AuthType
     setupState: SetupState
     enabled: boolean
+    status: ConnectionStatus
   }
 }
 
@@ -134,6 +139,7 @@ export type ConnectionsQuery = {
     setupState: SetupState
     iconUrl: string
     enabled: boolean
+    status: ConnectionStatus
   }>
 }
 
@@ -148,6 +154,7 @@ export type SetConnectionEnabledMutation = {
     id: string
     setupState: SetupState
     enabled: boolean
+    status: ConnectionStatus
   }
 }
 
@@ -181,6 +188,7 @@ export type UpdateConnectionMutation = {
     setupState: SetupState
     iconUrl: string
     enabled: boolean
+    status: ConnectionStatus
   }
 }
 
@@ -189,6 +197,18 @@ export type RemoveConnectionMutationVariables = Exact<{
 }>
 
 export type RemoveConnectionMutation = { removeConnection: string }
+
+export type ConnectionStatusChangedSubscriptionVariables = Exact<{
+  [key: string]: never
+}>
+
+export type ConnectionStatusChangedSubscription = {
+  connectionStatusChanged: {
+    __typename: "Connection"
+    id: string
+    status: ConnectionStatus
+  }
+}
 
 export type ProbeServerMutationVariables = Exact<{
   url: string
@@ -274,6 +294,10 @@ export const CatalogDocument = {
                         kind: "Field",
                         name: { kind: "Name", value: "enabled" },
                       },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "status" },
+                      },
                     ],
                   },
                 },
@@ -350,6 +374,7 @@ export const SwitchOnCatalogEntryDocument = {
                 { kind: "Field", name: { kind: "Name", value: "authType" } },
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
+                { kind: "Field", name: { kind: "Name", value: "status" } },
               ],
             },
           },
@@ -403,6 +428,7 @@ export const ConnectionsDocument = {
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
+                { kind: "Field", name: { kind: "Name", value: "status" } },
               ],
             },
           },
@@ -472,6 +498,7 @@ export const SetConnectionEnabledDocument = {
                 { kind: "Field", name: { kind: "Name", value: "id" } },
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
+                { kind: "Field", name: { kind: "Name", value: "status" } },
               ],
             },
           },
@@ -621,6 +648,7 @@ export const UpdateConnectionDocument = {
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
+                { kind: "Field", name: { kind: "Name", value: "status" } },
               ],
             },
           },
@@ -673,6 +701,35 @@ export const RemoveConnectionDocument = {
 } as unknown as DocumentNode<
   RemoveConnectionMutation,
   RemoveConnectionMutationVariables
+>
+export const ConnectionStatusChangedDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "subscription",
+      name: { kind: "Name", value: "ConnectionStatusChanged" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "connectionStatusChanged" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "status" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  ConnectionStatusChangedSubscription,
+  ConnectionStatusChangedSubscriptionVariables
 >
 export const ProbeServerDocument = {
   kind: "Document",

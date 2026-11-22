@@ -66,3 +66,46 @@ test("switches catalog entries on and off, and asks for the auth option when the
   await page.reload()
   await expect(page.getByRole("switch", { name: "Use Context7" })).toBeChecked()
 })
+
+// Changes a connection from outside the page, as another tab or the MCP
+// endpoint would, through the same /graphql the page uses.
+async function graphql(
+  request: import("@playwright/test").APIRequestContext,
+  query: string,
+  variables: Record<string, unknown>,
+) {
+  const response = await request.post("/graphql", {
+    data: { query, variables },
+  })
+  expect(response.ok()).toBe(true)
+  const body = (await response.json()) as {
+    data?: Record<string, { id: string }>
+    errors?: unknown[]
+  }
+  expect(body.errors).toBeUndefined()
+  return body.data ?? {}
+}
+
+test("shows the live status of a server's connection (T17)", async ({
+  page,
+  request,
+}) => {
+  const data = await graphql(
+    request,
+    "mutation ($input: CreateConnectionInput!) { createConnection(input: $input) { id } }",
+    { input: { displayName: "Live Twin", url: twinUrl(), authType: "NONE" } },
+  )
+  const id = data.createConnection?.id
+
+  await page.goto("/servers")
+  const row = page.getByRole("listitem").filter({ hasText: "Live Twin" })
+  await expect(row).toContainText("Connected")
+
+  // The page does not reload or refetch: the status arrives over the socket.
+  await graphql(
+    request,
+    "mutation ($id: ID!, $input: UpdateConnectionInput!) { updateConnection(id: $id, input: $input) { id } }",
+    { id, input: { url: "http://127.0.0.1:1/mcp" } },
+  )
+  await expect(row).toContainText("Unreachable")
+})

@@ -26,6 +26,7 @@ const REDIS_IMAGE = "redis:8.8.4-alpine"
 export const API_PORT = 3100
 export const WEB_PORT = 3101
 const API_URL = `http://127.0.0.1:${API_PORT}`
+const API_SOCKET_URL = `ws://127.0.0.1:${API_PORT}/graphql`
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`
 
 export default async function globalSetup() {
@@ -46,10 +47,11 @@ export default async function globalSetup() {
     SECRET_STORE: "aes-256-gcm",
     SECRET_STORE_KEY_ID: "e2e-1",
     SECRET_STORE_KEY: randomBytes(32).toString("base64"),
-    // Icon fetching and upstream clients would reach the catalog servers on
-    // the internet.
+    // Icon fetching would reach the catalog servers on the internet.
     ICON_FETCHING: "false",
-    UPSTREAM_CONNECTING: "false",
+    // Upstream clients connect only NONE connections, and no catalog entry
+    // in the seed is NONE, so they reach only the twin.
+    UPSTREAM_CONNECTING: "true",
   }
   await run(
     "pnpm",
@@ -66,7 +68,11 @@ export default async function globalSetup() {
     process.env,
   )
 
-  const webEnv = { ...process.env, API_URL }
+  const webEnv = {
+    ...process.env,
+    API_URL,
+    VITE_GRAPHQL_WS_URL: API_SOCKET_URL,
+  }
   await run("pnpm", ["exec", "vite", "build"], WEB_DIR, webEnv)
 
   mkdirSync(LOG_DIR, { recursive: true })
