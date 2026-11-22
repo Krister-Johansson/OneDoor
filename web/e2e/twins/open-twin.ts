@@ -31,7 +31,11 @@ export async function startOpenTwin(): Promise<Twin> {
     for (const name of OPEN_TWIN_TOOLS) {
       mcp.registerTool(
         name,
-        { description: `The ${name} tool.` },
+        {
+          description: `The ${name} tool.`,
+          // One tool with a hint, so the tools screen shows a label.
+          ...(name === "echo" && { annotations: { readOnlyHint: true } }),
+        },
         async () => ({
           content: [{ type: "text", text: name }],
         }),
