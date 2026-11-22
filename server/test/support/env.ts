@@ -16,4 +16,6 @@ export function stubAppEnv(
   vi.stubEnv('SECRET_STORE_KEY', randomBytes(32).toString('base64'));
   // Icon fetching would reach the network; icon tests turn it back on.
   vi.stubEnv('ICON_FETCHING', 'false');
+  // So would upstream clients; registry tests turn them back on.
+  vi.stubEnv('UPSTREAM_CONNECTING', 'false');
 }

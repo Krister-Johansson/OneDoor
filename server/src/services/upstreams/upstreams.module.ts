@@ -7,6 +7,7 @@ import { CatalogService } from './catalog/catalog.service.js';
 import { ConnectionsService } from './connections/connections.service.js';
 import { IconRefreshService } from './icon-refresh/icon-refresh.service.js';
 import { ProbeService } from './probe/probe.service.js';
+import { UpstreamRegistryService } from './registry/upstream-registry.service.js';
 
 // Connections, the catalog and probing. No transport: the API modules
 // import this one and expose the services.
@@ -17,6 +18,7 @@ import { ProbeService } from './probe/probe.service.js';
     CatalogService,
     ProbeService,
     IconRefreshService,
+    UpstreamRegistryService,
   ],
   exports: [ConnectionsService, CatalogService, ProbeService],
 })
