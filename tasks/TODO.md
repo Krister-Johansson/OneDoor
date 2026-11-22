@@ -29,6 +29,7 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 
 Spec: `specs/connections.md`.
 
+- [ ] T15b Web end-to-end tests. Playwright with `pnpm e2e` (not part of `verify`): global setup starts Postgres and Redis containers, a fake upstream MCP server in `web/e2e/twins/`, the server and the built web app. Flows: add a server through the dialog, and the catalog switch. Checkpoint: first Playwright flow.
 
 ## Upstream servers
 
