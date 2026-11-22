@@ -379,6 +379,18 @@ model Connection {
 
 Name a check constraint `<table>_<rule>_check`. Never edit a migration after it is merged; write a new one.
 
+When `migrate dev` stops at a confirmation prompt (for example for a new unique constraint) in a shell that is not interactive, write the migration from the diff instead, against a dev database that has every migration applied:
+
+```bash
+dir=prisma/migrations/$(date -u +%Y%m%d%H%M%S)_<name> && mkdir "$dir"
+pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > "$dir/migration.sql"
+pnpm exec prisma migrate deploy
+```
+
+Remove the `Loaded Prisma config` line from the file if the CLI prints it. The drift probe is then `migrate diff` again: it must print an empty migration.
+
+A child row whose owner must match its parent's owner uses a composite foreign key: the parent gets `@@unique([id, ownerId])`, and the child's relation uses `fields: [parentId, ownerId], references: [id, ownerId]`. `Tool` does this for `Connection`.
+
 ### Seed
 
 `prisma/seed.ts` creates the rows every environment needs, with `upsert` so it can run any number of times. It exports `seed(prisma)` for tests and runs itself only under `import.meta.main`. Run it with `pnpm prisma db seed`.
@@ -651,7 +663,7 @@ refreshConnectionInBackground(connectionId: string, url: string): void {
 - When the work writes its result back, the write checks that its input is still current, for example `updateMany({ where: { id, url } })`, so a slow run cannot overwrite a newer one.
 - Work at startup runs from `onApplicationBootstrap` without `await`, so startup does not block.
 - A config switch turns off work that reaches the network. `stubAppEnv()` turns it off, and the test of that feature turns it back on. `ICON_FETCHING` and `UPSTREAM_CONNECTING` are the switches so far.
-- This holds until the job queue exists; queued work then moves to BullMQ.
+- Work that must survive a restart or be retried goes on a BullMQ queue instead (see "Queues"). The `...InBackground` method then only adds the job.
 
 ### Files served from OneDoor's own origin
 
@@ -687,6 +699,39 @@ this.registry.syncInBackground(id);
 ### Tests
 
 The registry test is `server/test/upstream-registry.e2e-spec.ts`. It sets `UPSTREAM_CONNECTING=true` and uses the open twin. It waits for a background change with `vi.waitFor` on `registry.client(id)`, and calls `await registry.sync(id)` where the test itself made the change.
+
+## Queues
+
+Approved 2026-11-22.
+
+### Setup
+
+`QueueModule` in `server/src/queue/` sets up BullMQ on `REDIS_URL` with `manualRegistration`. A service module imports `QueueModule` and registers its own queues:
+
+```ts
+imports: [QueueModule, BullModule.registerQueue({ name: TOOL_SYNC_QUEUE })],
+```
+
+Workers start only when a service calls `BullRegistrar.register()` in `onModuleInit`, behind the config switch of the work (`UPSTREAM_CONNECTING` for tool sync). Without workers no Redis is needed, which keeps tests that do not start Redis quiet. A test that turns a switch on starts Redis in Testcontainers.
+
+### Files per queue
+
+```text
+services/upstreams/tool-sync/
+├── tool-sync.service.ts     TOOL_SYNC_QUEUE, ToolSyncJob, ToolSyncService.syncInBackground(), registers workers
+└── tool-sync.processor.ts   @Processor(TOOL_SYNC_QUEUE) ToolSyncProcessor extends WorkerHost
+```
+
+- The service exports the queue name and the job data type, and adds jobs from a `...InBackground` method that logs a failure to queue and returns at once.
+- Job data holds ids only. The processor loads what it needs.
+- The processor only delegates to services and logs one line per job with what it changed.
+- Jobs that reach another host use `attempts: 3`, `backoff: { type: 'exponential', delay: 1_000 }`, `removeOnComplete: true` and `removeOnFail: 100`.
+- A job is idempotent, so a repeated job is harmless. Deduplicate only when a job that is already running cannot miss the change that queued the next one.
+- Write results so that a failed job leaves the stored state as it was.
+
+### Tests
+
+An e2e test starts Postgres and Redis, sets the switch, and waits for the job's effect in the database with `vi.waitFor`. After adding a queue, stop its worker from registering once and see the tests fail.
 
 ## Events and subscriptions
 
