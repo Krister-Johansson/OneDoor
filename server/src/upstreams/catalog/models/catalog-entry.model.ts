@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
-import { AuthType } from '../generated/prisma/enums.js';
-import { ConnectionModel } from './connection.model.js';
+import { AuthType } from '../../../generated/prisma/enums.js';
+import { ConnectionModel } from '../../connections/models/connection.model.js';
 
 @ObjectType('CatalogAuthOption', {
   description:

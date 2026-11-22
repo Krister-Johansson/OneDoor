@@ -1,12 +1,12 @@
 import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
-import type { Caller } from '../caller/caller.js';
-import { CurrentCaller } from '../caller/current-caller.decorator.js';
+import type { Caller } from '../../caller/caller.js';
+import { CurrentCaller } from '../../caller/current-caller.decorator.js';
+import { ConnectionsService } from './connections.service.js';
 import {
   CreateConnectionInput,
   UpdateConnectionInput,
-} from './connection.input.js';
-import { ConnectionModel } from './connection.model.js';
-import { ConnectionsService } from './connections.service.js';
+} from './inputs/create-connection.input.js';
+import { ConnectionModel } from './models/connection.model.js';
 
 @Resolver(() => ConnectionModel)
 export class ConnectionResolver {

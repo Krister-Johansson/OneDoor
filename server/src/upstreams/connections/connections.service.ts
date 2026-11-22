@@ -1,30 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { SecretStore } from '../crypto/secret-store.js';
+import { SecretStore } from '../../crypto/secret-store.js';
 import {
   ConflictError,
   InternalError,
   NotFoundError,
   ValidationError,
-} from '../errors/domain-errors.js';
-import { AuthType } from '../generated/prisma/enums.js';
-import { PrismaService } from '../prisma/prisma.service.js';
-import { toDomainError } from '../prisma/prisma-error.mapper.js';
-import type {
-  CreateConnectionInput,
-  UpdateConnectionInput,
-} from './connection.input.js';
+} from '../../errors/domain-errors.js';
+import { AuthType } from '../../generated/prisma/enums.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { toDomainError } from '../../prisma/prisma-error.mapper.js';
+import { IconRefreshService } from '../icon-refresh/icon-refresh.service.js';
 import {
   CONNECTION_INCLUDE,
   type ConnectionRow,
   toConnectionModel,
 } from './connection.mapper.js';
-import type { ConnectionModel } from './connection.model.js';
 import {
   DEFAULT_HEADER_NAME,
   DEFAULT_HEADER_PREFIX,
 } from './connection-rules.js';
-import { IconRefreshService } from './icon-refresh.service.js';
+import type {
+  CreateConnectionInput,
+  UpdateConnectionInput,
+} from './inputs/create-connection.input.js';
+import type { ConnectionModel } from './models/connection.model.js';
 
 // The columns that hold credentials, as the service writes them.
 interface CredentialColumns {

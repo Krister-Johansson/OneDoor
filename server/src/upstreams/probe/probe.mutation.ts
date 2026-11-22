@@ -1,6 +1,9 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CheckCredentialsInput } from './probe.input.js';
-import { CredentialsCheckModel, ProbeResultModel } from './probe.model.js';
+import { CheckCredentialsInput } from './inputs/check-credentials.input.js';
+import {
+  CredentialsCheckModel,
+  ProbeResultModel,
+} from './models/probe-result.model.js';
 import { ProbeService } from './probe.service.js';
 
 // Mutations, not queries, because they send requests to other hosts.

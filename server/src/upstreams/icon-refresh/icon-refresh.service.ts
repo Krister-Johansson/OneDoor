@@ -5,10 +5,10 @@ import {
   type OnApplicationBootstrap,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
-import { iconsConfig } from '../config/icons.config.js';
-import { IconsService } from '../icons/icons.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
-import { ProbeService } from './probe.service.js';
+import { iconsConfig } from '../../config/icons.config.js';
+import { IconsService } from '../../icons/icons.service.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { ProbeService } from '../probe/probe.service.js';
 
 // Finds and stores server icons (REQ-CONN-070) in the background, so no
 // request waits for another host. Without a stored icon the letter icon

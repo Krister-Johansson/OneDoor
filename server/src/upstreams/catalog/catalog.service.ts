@@ -4,14 +4,17 @@ import {
   ConflictError,
   NotFoundError,
   ValidationError,
-} from '../errors/domain-errors.js';
-import type { AuthType } from '../generated/prisma/enums.js';
-import { iconPath } from '../icons/icons.service.js';
-import { PrismaService } from '../prisma/prisma.service.js';
-import { toDomainError } from '../prisma/prisma-error.mapper.js';
-import type { CatalogEntryModel } from './catalog-entry.model.js';
-import { CONNECTION_INCLUDE, toConnectionModel } from './connection.mapper.js';
-import type { ConnectionModel } from './connection.model.js';
+} from '../../errors/domain-errors.js';
+import type { AuthType } from '../../generated/prisma/enums.js';
+import { iconPath } from '../../icons/icons.service.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { toDomainError } from '../../prisma/prisma-error.mapper.js';
+import {
+  CONNECTION_INCLUDE,
+  toConnectionModel,
+} from '../connections/connection.mapper.js';
+import type { ConnectionModel } from '../connections/models/connection.model.js';
+import type { CatalogEntryModel } from './models/catalog-entry.model.js';
 
 @Injectable()
 export class CatalogService {

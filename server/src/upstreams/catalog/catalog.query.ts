@@ -1,10 +1,10 @@
 import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
-import type { Caller } from '../caller/caller.js';
-import { CurrentCaller } from '../caller/current-caller.decorator.js';
-import { AuthType } from '../generated/prisma/enums.js';
+import type { Caller } from '../../caller/caller.js';
+import { CurrentCaller } from '../../caller/current-caller.decorator.js';
+import { AuthType } from '../../generated/prisma/enums.js';
+import { ConnectionModel } from '../connections/models/connection.model.js';
 import { CatalogService } from './catalog.service.js';
-import { CatalogEntryModel } from './catalog-entry.model.js';
-import { ConnectionModel } from './connection.model.js';
+import { CatalogEntryModel } from './models/catalog-entry.model.js';
 
 @Resolver(() => CatalogEntryModel)
 export class CatalogEntryResolver {

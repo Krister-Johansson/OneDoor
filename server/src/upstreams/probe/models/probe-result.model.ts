@@ -1,5 +1,5 @@
 import { Field, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
-import { AuthType } from '../generated/prisma/enums.js';
+import { AuthType } from '../../../generated/prisma/enums.js';
 
 export const ProbeStatus = {
   MCP_SERVER: 'MCP_SERVER',

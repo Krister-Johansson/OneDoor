@@ -1,5 +1,5 @@
 import { registerDecorator, type ValidationOptions } from 'class-validator';
-import { fetchUrlProblem } from '../net/url-policy.js';
+import { fetchUrlProblem } from '../../net/url-policy.js';
 
 // Field rules for connections (specs/connections.md). The functions return
 // the problem as text, or null when the value is fine. Messages never repeat

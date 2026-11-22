@@ -8,12 +8,12 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
-import { AuthType } from '../generated/prisma/enums.js';
+import { AuthType } from '../../../generated/prisma/enums.js';
 import {
   HasNoControlCharacters,
   IsHeaderName,
   IsServerUrl,
-} from './connection-rules.js';
+} from '../connection-rules.js';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
