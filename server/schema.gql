@@ -35,6 +35,22 @@ type CatalogEntry {
   key: String!
 }
 
+"""Credentials to check before saving (REQ-CONN-062). Nothing is stored."""
+input CheckCredentialsInput {
+  """Required for API_KEY."""
+  apiKey: String
+
+  """NONE or API_KEY."""
+  authType: AuthType!
+
+  """Defaults to Authorization."""
+  headerName: String
+
+  """Defaults to Bearer."""
+  headerPrefix: String
+  url: String!
+}
+
 """
 A user's link to one MCP server. A catalog-based connection shows its catalog entry's name, description, URL, auth type and header settings.
 """
@@ -100,14 +116,45 @@ input CreateConnectionInput {
   url: String!
 }
 
+"""The result of connecting with credentials (REQ-CONN-062)."""
+type CredentialsCheck {
+  message: String!
+  status: CredentialsStatus!
+  toolCount: Int
+
+  """The first five tool names."""
+  toolNames: [String!]!
+}
+
+"""
+OK: connected and listed the tools. REFUSED_CREDENTIALS: the server answered 401 or 403. The other values mean the same as in ProbeStatus.
+"""
+enum CredentialsStatus {
+  NOT_MCP
+  OK
+  REFUSED
+  REFUSED_CREDENTIALS
+  UNREACHABLE
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
 
 type Mutation {
+  """
+  Connects with credentials and lists the tools. Stores nothing (REQ-CONN-062).
+  """
+  checkCredentials(input: CheckCredentialsInput!): CredentialsCheck!
+
   """Adds a custom server (REQ-CONN-020)."""
   createConnection(input: CreateConnectionInput!): Connection!
+
+  """
+  Checks a server URL without credentials. Stores nothing (REQ-CONN-060).
+  """
+  probeServer(url: String!): ProbeResult!
 
   """
   Removes a connection with its credentials, and returns its id (REQ-CONN-052).
@@ -124,6 +171,42 @@ type Mutation {
 
   """Changes a custom server (REQ-CONN-023, REQ-CONN-042)."""
   updateConnection(id: ID!, input: UpdateConnectionInput!): Connection!
+}
+
+"""What a server shows without credentials (REQ-CONN-060)."""
+type ProbeResult {
+  authRequired: Boolean!
+
+  """The http(s) URLs of the server's own icons. Not fetched."""
+  iconUrls: [String!]!
+
+  """Why the probe ended as it did, for the user."""
+  message: String!
+
+  """Whether the server publishes OAuth metadata."""
+  oauth: Boolean!
+
+  """Whether its authorization server offers dynamic client registration."""
+  oauthDcr: Boolean!
+  serverDescription: String
+  serverName: String
+  serverTitle: String
+  serverVersion: String
+  status: ProbeStatus!
+
+  """The auth type for the add dialog to pre-fill (REQ-CONN-061)."""
+  suggestedAuthType: AuthType
+}
+
+"""
+MCP_SERVER: answered MCP initialize. AUTH_REQUIRED: answered 401 or 403. NOT_MCP: answered, but not MCP. UNREACHABLE: no answer within 10 seconds. REFUSED: the network rules stopped the request (REQ-CONN-063).
+"""
+enum ProbeStatus {
+  AUTH_REQUIRED
+  MCP_SERVER
+  NOT_MCP
+  REFUSED
+  UNREACHABLE
 }
 
 type Query {
