@@ -5,6 +5,8 @@ import { defineConfig, devices } from "@playwright/test"
 // `pnpm e2e`; it needs Docker.
 export default defineConfig({
   testDir: "e2e",
+  // Not *.spec.ts, so Vitest does not pick the flows up.
+  testMatch: "**/*.e2e.ts",
   globalSetup: "./e2e/global-setup.ts",
   // The flows share one database, so they run one at a time.
   workers: 1,
