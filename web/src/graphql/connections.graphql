@@ -17,3 +17,12 @@ query Connections {
     enabled
   }
 }
+
+# Enables or disables a connection (REQ-CONN-051).
+mutation SetConnectionEnabled($id: ID!, $enabled: Boolean!) {
+  setConnectionEnabled(id: $id, enabled: $enabled) {
+    id
+    setupState
+    enabled
+  }
+}

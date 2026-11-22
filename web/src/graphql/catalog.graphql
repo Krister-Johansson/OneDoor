@@ -17,3 +17,13 @@ query Catalog {
     }
   }
 }
+
+# Switches on a catalog entry with one of its auth options (REQ-CONN-012).
+mutation SwitchOnCatalogEntry($catalogEntryId: ID!, $authType: AuthType!) {
+  switchOnCatalogEntry(catalogEntryId: $catalogEntryId, authType: $authType) {
+    id
+    authType
+    setupState
+    enabled
+  }
+}
