@@ -18,10 +18,10 @@ export const Route = createFileRoute("/servers")({
 function ServersPage() {
   useConnectionStatusChanges()
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-10 p-4 sm:p-8">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 p-4 sm:p-8">
       <h1 className="text-2xl font-bold">Servers</h1>
       <CatalogSection />
       <MyServersSection />
-    </main>
+    </div>
   )
 }

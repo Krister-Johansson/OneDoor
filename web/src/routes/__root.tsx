@@ -7,6 +7,14 @@ import {
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 
+import { AppSidebar } from "#/components/app-sidebar"
+import { Separator } from "#/components/ui/separator"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "#/components/ui/sidebar"
+import { TooltipProvider } from "#/components/ui/tooltip"
 import appCss from "../styles.css?url"
 
 export const Route =
@@ -41,7 +49,22 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <TooltipProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator
+                  orientation="vertical"
+                  className="data-vertical:h-4 data-vertical:self-center"
+                />
+                <span className="text-muted-foreground text-sm">OneDoor</span>
+              </header>
+              {children}
+            </SidebarInset>
+          </SidebarProvider>
+        </TooltipProvider>
         <TanStackDevtools
           config={{
             position: "bottom-right",
