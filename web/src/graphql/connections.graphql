@@ -1,0 +1,19 @@
+# The caller's connections (specs/connections.md, REQ-CONN-001).
+query Connections {
+  connections {
+    id
+    catalogEntryId
+    displayName
+    description
+    url
+    authType
+    headerName
+    headerPrefix
+    hasApiKey
+    oauthClientId
+    hasClientSecret
+    setupState
+    iconUrl
+    enabled
+  }
+}
