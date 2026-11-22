@@ -14,6 +14,27 @@ export type AuthType = "API_KEY" | "NONE" | "OAUTH_DCR" | "OAUTH_MANUAL"
 /** Whether the credentials of a connection are complete (REQ-CONN-044). */
 export type SetupState = "NEEDS_CREDENTIALS" | "READY"
 
+export type CatalogQueryVariables = Exact<{ [key: string]: never }>
+
+export type CatalogQuery = {
+  catalog: Array<{
+    __typename: "CatalogEntry"
+    id: string
+    key: string
+    displayName: string
+    description: string
+    iconUrl: string
+    authOptions: Array<{ __typename: "CatalogAuthOption"; authType: AuthType }>
+    connection: {
+      __typename: "Connection"
+      id: string
+      authType: AuthType
+      setupState: SetupState
+      enabled: boolean
+    } | null
+  }>
+}
+
 export type ConnectionsQueryVariables = Exact<{ [key: string]: never }>
 
 export type ConnectionsQuery = {
@@ -36,6 +57,70 @@ export type ConnectionsQuery = {
   }>
 }
 
+export const CatalogDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "Catalog" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "catalog" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "key" } },
+                { kind: "Field", name: { kind: "Name", value: "displayName" } },
+                { kind: "Field", name: { kind: "Name", value: "description" } },
+                { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "authOptions" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "authType" },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "connection" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      { kind: "Field", name: { kind: "Name", value: "id" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "authType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "setupState" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "enabled" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<CatalogQuery, CatalogQueryVariables>
 export const ConnectionsDocument = {
   kind: "Document",
   definitions: [
