@@ -537,3 +537,36 @@ In an update input, a field left out keeps its value. For a nullable field, `nul
 - Encrypt with the context `<table>:<row id>:<field>`. A new row is inserted first without its secrets, then updated with them, inside one transaction.
 - GraphQL exposes `has<Field>: Boolean!`, never the value.
 - The e2e test checks every response for the secret's plaintext, and that the stored ciphertext decrypts only with its own row's context.
+
+## Fetching other hosts
+
+Approved 2026-11-22.
+
+### GuardedFetch
+
+Every request to a URL that a user or an upstream server supplies goes through `GuardedFetch` from `NetModule` (`server/src/net/`). That covers MCP transports, OAuth metadata and icons. Never call `fetch`, `undici` or `http` directly for such a URL.
+
+```ts
+const fetch = this.guardedFetch.create({ sensitiveHeaders: [headerName] });
+const transport = new StreamableHTTPClientTransport(new URL(url), {
+  fetch,
+  requestInit: { headers },
+});
+```
+
+It applies REQ-CONN-063: the URL rule from `url-policy.ts`, the address rules from `address-policy.ts` at connect time, at most three redirects with credential headers dropped across origins, and a 1 MB body cap. Pass the name of any custom credential header in `sensitiveHeaders`.
+
+A refused request throws `NetworkRuleError`; fetch may wrap it, so find it with `findNetworkRuleError(error)`.
+
+### Results the client sees
+
+Code that reports on another host returns fixed messages that it writes itself. An upstream's error text, status text or response body never reaches the client, so it cannot carry a secret or untrusted text back.
+
+Give every outgoing call a deadline with `AbortSignal.timeout(...)`, combined with the caller's signal through `AbortSignal.any`.
+
+### Tests
+
+- Fake upstream servers live in `server/test/twins/`, which is human-owned. Add or change a twin only with the owner's permission, and say so in the PR.
+- A twin is a `start<Name>Twin()` function that listens on 127.0.0.1 on a free port and returns `{ url, origin, close }`. MCP twins serve Streamable HTTP statelessly with `@modelcontextprotocol/server` and `@modelcontextprotocol/node`.
+- Tests of the network rules construct `GuardedFetch` with a fake resolver (`ResolveAll`), so no test depends on real DNS or reaches the internet.
+- A test that sends a secret asserts that no response contains it.

@@ -19,13 +19,13 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T08 Secret storage. `SecretStore` with `AesGcmSecretStore` (AES-256-GCM, context as associated data), the `crypto` config namespace, and the factory binding in `CryptoModule`.
 - [x] T09 Custom connections. `createConnection`, `updateConnection`, `setConnectionEnabled` and `removeConnection`, class-validator inputs with a global `ValidationPipe`, and API keys and client secrets encrypted with `SecretStore` (migration `20261122000306_connection_secrets`).
 - [x] T10 Catalog. Catalog entries with auth options, GitHub (API key) and Context7 (OAuth with DCR, or API key) in the seed, the `catalog` query, `switchOnCatalogEntry`, and API keys for catalog-based connections (migration `20261122002230_catalog_auth_options`).
+- [x] T11 Probe and credentials check. `GuardedFetch` in `NetModule` with the network rules, `probeServer` (MCP initialize and OAuth discovery) and `checkCredentials`, and the first test twins.
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T11 Probe and credentials check. `probeServer` and `checkCredentials`, with the network rules for fetching. Covers REQ-CONN-060 to 063. Human review: fetching user-supplied URLs.
-- [ ] T12 Server icons. MCP `icons`, then the favicon, then a generated letter icon; stored and served from our origin. Covers REQ-CONN-070 and 071. Human review: fetching upstream URLs.
+- [ ] T12 Server icons. MCP `icons`, then the favicon, then a generated letter icon, fetched through `GuardedFetch`; stored and served from our origin. Covers REQ-CONN-070 and 071. Human review: fetching upstream URLs.
 - [ ] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql`, a `codegen` script, and a codegen drift check in web `verify`. Checkpoint: codegen setup.
 - [ ] T14 Servers screen. First route, with the catalog section and "My servers" (REQ-CONN-080). `useConnections()` and `useCatalog()` in `src/hooks/`, shadcn components added with the shadcn CLI. Checkpoint: first route, first hook wrapper.
 - [ ] T15 Add and edit dialogs. The add dialog with probe pre-fill and the credentials check, the edit form with write-only secret fields that show "Set" or "Not set", and remove with confirmation. Covers REQ-CONN-081 and 082.
