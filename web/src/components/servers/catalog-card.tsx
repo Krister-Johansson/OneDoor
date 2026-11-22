@@ -14,6 +14,8 @@ import { useSwitchOnCatalogEntry } from "#/hooks/use-switch-on-catalog-entry"
 import { errorCode } from "#/lib/graphql-error"
 import { AuthOptionDialog } from "./auth-option-dialog"
 import { ConnectionStatusBadge } from "./connection-status-badge"
+import { ResyncToolsButton } from "./resync-tools-button"
+import { ToolCountBadge } from "./tool-count-badge"
 
 type CatalogEntry = CatalogQuery["catalog"][number]
 
@@ -77,7 +79,17 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
         {connection?.setupState === "NEEDS_CREDENTIALS" && (
           <Badge variant="outline">Needs credentials</Badge>
         )}
-        {connection && <ConnectionStatusBadge status={connection.status} />}
+        {connection && (
+          <div className="flex flex-wrap items-center gap-2">
+            <ConnectionStatusBadge status={connection.status} />
+            <ToolCountBadge toolCount={connection.toolCount} />
+            <ResyncToolsButton
+              connection={connection}
+              serverName={entry.displayName}
+              onError={setError}
+            />
+          </div>
+        )}
         {error && (
           <p role="alert" className="text-destructive text-sm">
             {error}

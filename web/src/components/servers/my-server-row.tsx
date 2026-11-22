@@ -16,6 +16,8 @@ import { errorCode } from "#/lib/graphql-error"
 import { ConnectionStatusBadge } from "./connection-status-badge"
 import { EditServerDialog } from "./edit-server-dialog"
 import { RemoveServerDialog } from "./remove-server-dialog"
+import { ResyncToolsButton } from "./resync-tools-button"
+import { ToolCountBadge } from "./tool-count-badge"
 
 type Connection = ConnectionsQuery["connections"][number]
 
@@ -65,6 +67,12 @@ export function MyServerRow({ connection }: { connection: Connection }) {
           {connection.enabled ? "Enabled" : "Disabled"}
         </Badge>
         <ConnectionStatusBadge status={connection.status} />
+        <ToolCountBadge toolCount={connection.toolCount} />
+        <ResyncToolsButton
+          connection={connection}
+          serverName={connection.displayName}
+          onError={setError}
+        />
         <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
           Edit
         </Button>

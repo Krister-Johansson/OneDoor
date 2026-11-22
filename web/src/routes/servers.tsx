@@ -3,6 +3,7 @@ import { CatalogSection } from "#/components/servers/catalog-section"
 import { MyServersSection } from "#/components/servers/my-servers-section"
 import { CatalogDocument, ConnectionsDocument } from "#/gql/graphql"
 import { useConnectionStatusChanges } from "#/hooks/use-connection-status-changes"
+import { useConnectionToolSyncs } from "#/hooks/use-connection-tool-syncs"
 
 export const Route = createFileRoute("/servers")({
   // Starts both queries before rendering, so the sections do not wait for
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/servers")({
 
 function ServersPage() {
   useConnectionStatusChanges()
+  useConnectionToolSyncs()
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 p-4 sm:p-8">
       <h1 className="text-2xl font-bold">Servers</h1>

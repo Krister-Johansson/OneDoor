@@ -16,6 +16,7 @@ query Connections {
     iconUrl
     enabled
     status
+    toolCount
   }
 }
 
@@ -55,6 +56,16 @@ mutation UpdateConnection($id: ID!, $input: UpdateConnectionInput!) {
     iconUrl
     enabled
     status
+    toolCount
+  }
+}
+
+# Queues a sync of a connection's tools (T18). The new count arrives
+# through ConnectionToolsSynced once the sync finishes.
+mutation ResyncTools($id: ID!) {
+  resyncTools(id: $id) {
+    id
+    toolCount
   }
 }
 
@@ -70,5 +81,14 @@ subscription ConnectionStatusChanged {
   connectionStatusChanged {
     id
     status
+  }
+}
+
+# Sends a connection each time a sync of its tools finishes, also when
+# nothing changed (T18). Apollo updates the cached connection by id.
+subscription ConnectionToolsSynced {
+  connectionToolsSynced {
+    id
+    toolCount
   }
 }
