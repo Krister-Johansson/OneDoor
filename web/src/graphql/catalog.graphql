@@ -1,0 +1,19 @@
+# Every catalog entry with the caller's connection (specs/connections.md, REQ-CONN-011).
+query Catalog {
+  catalog {
+    id
+    key
+    displayName
+    description
+    iconUrl
+    authOptions {
+      authType
+    }
+    connection {
+      id
+      authType
+      setupState
+      enabled
+    }
+  }
+}
