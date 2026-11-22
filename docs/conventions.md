@@ -765,6 +765,18 @@ export function useSetConnectionEnabled() {
 
 A dialog is a component in `src/components/<screen>/` built on shadcn `Dialog`, controlled by its parent through `open` and `onOpenChange`. It reports the user's choice through a callback, such as `onChoose(authType)`, and the parent runs the mutation.
 
+### Forms
+
+Forms use TanStack Form (`@tanstack/react-form`) with shadcn's `Field` components. `add-server-dialog.tsx` is the example.
+
+- `useForm({ defaultValues, onSubmit })`. Default values are strings, so inputs stay controlled. Enum fields start at a real value, such as `"NONE" as AuthType`.
+- Each field renders through `form.Field` inside `Field`, with `FieldLabel htmlFor={field.name}`, the control with `id={field.name}`, `aria-invalid`, and `FieldError` when the field is touched and invalid.
+- Field validators (`validators: { onChange }`) return a message string or `undefined`. They check only what the user can fix at once, such as required fields and lengths. The server is the gate.
+- Fields that depend on another field's value render inside `form.Subscribe`, so a hidden field is not validated. Groups of such fields are render functions inside the form component, not separate components.
+- `onSubmit` maps the values to the GraphQL input, sending only the fields that apply, calls the mutation hook, and on success closes the dialog and resets the form. On an error it shows a message by `errorCode()` above the buttons.
+- A field filled in from a server response (the probe) is filled again only while the user has not changed it.
+- Secret inputs use `type="password"` and `autoComplete="off"`, and are never filled in from stored values.
+
 ### shadcn components
 
 - Add components with `pnpm dlx shadcn@latest add <component> --yes`. They are committed in `src/components/ui/` and may be edited. When the CLI asks to overwrite an existing component, answer no (`printf 'n\n' | pnpm dlx shadcn@latest add ...`).
