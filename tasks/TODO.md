@@ -25,6 +25,7 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T14 Servers screen. `/servers` with the catalog cards and "My servers" (REQ-CONN-080), `useCatalog()` and `useConnections()` read from queries the route loader preloads, and the first shadcn components. The catalog switch and the add, edit and remove actions are disabled until mutations exist.
 - [x] T15 Catalog switch and server dialogs. The catalog switch with the auth option choice, the add dialog with probe pre-fill and the credentials check (TanStack Form), the edit form with write-only secrets, and remove with confirmation (REQ-CONN-080 to 082).
 - [x] T15b Web end-to-end tests. Playwright with `pnpm e2e` (not part of `verify`), global setup with containers, a web twin, the built server and web app, and flows for adding a server and the catalog switch.
+- [x] T16 Upstream registry. `UpstreamRegistryService` with one MCP client per enabled, `READY` and `NONE` connection, connected from `onApplicationBootstrap` without blocking, synced after every connection write, closed in `onModuleDestroy`, and the `upstreams` config namespace (`UPSTREAM_CONNECTING`).
 
 ## Connections
 
@@ -34,7 +35,6 @@ Spec: `specs/connections.md`.
 
 Needs spec: `specs/upstreams.md`. Needs fake upstream MCP servers in `server/test/twins/`, which are human-owned.
 
-- [ ] T16 Upstream registry. One singleton registry of `@modelcontextprotocol/client` clients for every enabled and `READY` connection. It connects in `onApplicationBootstrap` without blocking startup, follows enable, disable and removal, and closes clients in `onModuleDestroy`.
 - [ ] T17 Live connection status. `EventBus` abstract class with a Redis implementation, a status subscription over `graphql-ws`, and a live badge in web.
 - [ ] T18 Tool sync. A BullMQ job when a connection becomes enabled and `READY`, and on tool-list change: list tools, diff by content hash, store the tools. Adds a "re-sync tools" action.
 - [ ] T19 Tool policy. An enabled flag per tool, set by the owner, with new tools enabled. MCP annotations are shown as labels and never enforced. Adds the tools screen per connection.
