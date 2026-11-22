@@ -230,19 +230,20 @@ Approved 2026-11-21.
 
 ### HTTP controllers
 
-Plain HTTP routes are few: health checks, the OAuth callback and icons. GraphQL serves everything else. Generate the module and controller with the Nest CLI, and a helper provider with `nest g provider <module>/<name> --flat --no-spec`:
+Plain HTTP routes are few: health checks, the OAuth callback and icons. GraphQL serves everything else. They live in `HttpApiModule` (`server/src/api/http/`), one folder per area. Generate the controller and any helper provider with the Nest CLI:
 
 ```bash
-pnpm exec nest g module health
-pnpm exec nest g controller health
-pnpm exec nest g provider health/redis.health --flat --no-spec
+pnpm exec nest g controller api/http/health --no-spec
+pnpm exec nest g provider api/http/health/redis.health --flat --no-spec
 ```
+
+The CLI adds the controller to `HttpApiModule`; add a provider yourself. Logic the controller needs comes from a service module, as `IconsController` uses `IconsService` from `services/icons`.
 
 A controller has one `@Controller('<area>')` prefix and methods that only delegate. Delete the controller spec that `nest g controller` writes; an e2e test covers the routes.
 
 ### Health checks
 
-`HealthModule` uses `@nestjs/terminus`:
+The health checks use `@nestjs/terminus`, which `HttpApiModule` imports:
 
 - `GET /health/live` runs `health.check([])`. It checks no dependencies, so an outage does not get the process restarted.
 - `GET /health/ready` checks every hard dependency and answers 503 when one is down. Postgres uses Terminus's `PrismaHealthIndicator` with `PrismaService`. Redis uses `RedisHealthIndicator`.
@@ -395,6 +396,33 @@ await expect(create()).rejects.toThrow(/connection_catalog_or_custom_check/);
 expect(toDomainError(error, 'Connection')).toBeInstanceOf(ConflictError);
 ```
 
+## Server layers
+
+Approved 2026-11-22.
+
+`server/src` is split by layer:
+
+```text
+server/src/
+├── api/
+│   ├── graphql/        GraphqlApiModule: GraphQLModule and every resolver, one folder per feature
+│   ├── http/           HttpApiModule: plain HTTP controllers (health/, icons/)
+│   ├── mcp/            later: the MCP endpoint
+│   └── validation/     class-validator decorators for API inputs
+├── auth/               CallerModule: the caller identity and CallerGuard
+├── services/
+│   ├── upstreams/      UpstreamsModule: one folder per feature (connections/, catalog/, probe/, icon-refresh/)
+│   └── icons/          IconsModule
+└── config/ crypto/ errors/ net/ prisma/   shared
+```
+
+- Imports go one way: `api` imports `services` and `auth`, and `services` imports the shared folders. `services` and `auth` never import from `api`.
+- A service module provides and exports services only. An API module imports the service modules it needs and provides the resolvers or controllers.
+- `AppModule` imports `PrismaModule`, `CallerModule` and the API modules. Service modules come in through the API modules.
+- Services take and return plain types defined in `services/<module>/<feature>/<name>.interface.ts` (generate with `nest g interface <path> --flat`). Enums that GraphQL shows are `as const` objects in the same file.
+- In a service, import Prisma's row types under a `Record` suffix (`Connection as ConnectionRecord`), so they do not clash with the service types.
+- Auth to upstream servers (API keys, OAuth to GitHub and others) belongs to `services/upstreams`. `auth/` is only about who calls OneDoor.
+
 ## GraphQL
 
 Approved 2026-11-22.
@@ -411,45 +439,51 @@ In tests, load `graphql` with `createRequire(import.meta.url)('graphql')` when t
 
 ### Files per feature
 
-Approved 2026-11-22. Each feature has its own folder inside its module, with GraphQL classes split by kind:
+Approved 2026-11-22. A feature has one folder in `api/graphql/` and one in its service module, with GraphQL classes split by kind:
 
 ```text
-server/src/upstreams/
-├── upstreams.module.ts
-└── connections/
-    ├── connections.query.ts       ConnectionsQuery: @Query methods
-    ├── connections.mutation.ts    ConnectionsMutation: @Mutation methods
-    ├── connections.service.ts
-    ├── connection.mapper.ts
-    ├── connection-rules.ts (+ .spec.ts)
-    ├── inputs/
-    │   ├── create-connection.input.ts
-    │   └── update-connection.input.ts
-    └── models/
-        └── connection.model.ts
+server/src/
+├── api/graphql/
+│   ├── graphql-api.module.ts
+│   └── connections/
+│       ├── connections.query.ts       ConnectionsQuery: @Query methods
+│       ├── connections.mutation.ts    ConnectionsMutation: @Mutation methods
+│       ├── inputs/
+│       │   ├── create-connection.input.ts   CreateConnectionInput implements CreateConnectionData
+│       │   └── update-connection.input.ts
+│       └── models/
+│           └── connection.model.ts          ConnectionModel implements Connection
+└── services/upstreams/
+    ├── upstreams.module.ts
+    └── connections/
+        ├── connection.interface.ts    Connection, CreateConnectionData, UpdateConnectionData, SetupState
+        ├── connections.service.ts
+        ├── connection.mapper.ts
+        └── connection-rules.ts (+ .spec.ts)
 ```
 
 Generate the files with the Nest CLI, then fill them in. `nest g class` names the class after the file, so `connections.query` becomes `ConnectionsQuery`:
 
 ```bash
-pnpm exec nest g class upstreams/connections/models/connection.model --flat --no-spec
-pnpm exec nest g class upstreams/connections/inputs/create-connection.input --flat --no-spec
-pnpm exec nest g service upstreams/connections/connections --flat --no-spec
-pnpm exec nest g class upstreams/connections/connections.query --flat --no-spec
-pnpm exec nest g class upstreams/connections/connections.mutation --flat --no-spec
+pnpm exec nest g interface services/upstreams/connections/connection --flat
+pnpm exec nest g service services/upstreams/connections/connections --flat --no-spec
+pnpm exec nest g class api/graphql/connections/models/connection.model --flat --no-spec
+pnpm exec nest g class api/graphql/connections/inputs/create-connection.input --flat --no-spec
+pnpm exec nest g class api/graphql/connections/connections.query --flat --no-spec
+pnpm exec nest g class api/graphql/connections/connections.mutation --flat --no-spec
 ```
 
-- One class per file. An enum lives in the file of the model that uses it.
-- `models/<name>.model.ts`: the `@ObjectType('<Name>')` class, named `<Name>Model` in TypeScript. Every field has `@Field`; nullable and enum fields give their type, as in `@Field(() => String, { nullable: true })`. Describe fields that are not obvious, and name the requirement.
-- `inputs/<name>.input.ts` (`@InputType`) and `inputs/<name>.args.ts` (`@ArgsType`).
+- One class per file.
+- `models/<name>.model.ts`: the `@ObjectType('<Name>')` class, named `<Name>Model` in TypeScript, that `implements` the service type. Every field has `@Field`; nullable and enum fields give their type, as in `@Field(() => String, { nullable: true })`. Describe fields that are not obvious, and name the requirement.
+- `inputs/<name>.input.ts` (`@InputType`) and `inputs/<name>.args.ts` (`@ArgsType`), each implementing the service's data type.
 - `<feature>.query.ts`: `@Resolver(() => <Name>Model) class <Feature>Query` with only `@Query` methods. `<feature>.mutation.ts` is the same for `@Mutation`, and `<feature>.subscription.ts` for `@Subscription`. A feature without queries has no query file. A resolver with no object type, such as `ProbeMutation`, uses `@Resolver()`.
 - `<name>.resolver.ts` holds only `@ResolveField` methods of an object type. Generate it with `nest g resolver <path> --flat --no-spec`.
-- Every query, mutation and subscription has a `description`. Methods only delegate to the service.
-- `<feature>.service.ts`: the logic. It reads with Prisma, catches with `toDomainError`, and maps rows to models (in the service or in `<name>.mapper.ts`). It never returns a Prisma type.
-- A feature folder may import another feature's models and rules, as `catalog/` imports `ConnectionModel`.
-- Register every resolver class in the module's `providers`.
+- Every query, mutation and subscription has a `description`. Methods only delegate to the service and return its result as it is.
+- `<feature>.service.ts`: the logic. It reads with Prisma, catches with `toDomainError`, and maps rows to the service types (in the service or in `<name>.mapper.ts`). It never returns a Prisma type.
+- A feature folder may import another feature's types, models and rules, as `catalog/` imports `Connection` and `ConnectionModel`.
+- `nest g service` adds the service to its module's `providers`; add it to `exports` too. `nest g class` registers nothing, so add each resolver class to `GraphqlApiModule`'s `providers`.
 
-Register a Prisma enum for GraphQL with `registerEnumType` in the model file.
+Register an enum for GraphQL with `registerEnumType` in the model file that uses it: a Prisma enum, or an `as const` enum from a service type file.
 
 ### The caller
 
@@ -539,10 +573,10 @@ Approved 2026-11-22.
 
 `inputs/create-<name>.input.ts` holds `Create<Name>Input`, and `inputs/update-<name>.input.ts` holds `Update<Name>Input`. Both are `@InputType` with a `description`. Every field has `@Field` and class-validator decorators:
 
-- A required string: `@IsString()` and a length rule. Trim names with `@Trim()` from the feature's rules file.
+- A required string: `@IsString()` and a length rule. Trim names with `@Trim()` from `api/validation/validators.ts`.
 - An optional field that may be null: `@IsOptional()`.
 - An update field that may be left out but not set to null: `@IfGiven()` before the rules.
-- A rule that needs code lives in `<name>-rules.ts` as a function that returns the problem as text, or null, plus a decorator made with `registerDecorator`. The message never repeats the value. Test the functions in `<name>-rules.spec.ts`.
+- A rule that needs code is a function in the service's `<name>-rules.ts` that returns the problem as text, or null. Test the functions in `<name>-rules.spec.ts`. Its decorator, made with `registerDecorator`, lives in `api/validation/validators.ts`. The message never repeats the value.
 
 Rules that compare fields (one field required when another has a value) live in the service and throw `ValidationError`.
 
