@@ -24,6 +24,7 @@ import {
   DEFAULT_HEADER_NAME,
   DEFAULT_HEADER_PREFIX,
 } from './connection-rules.js';
+import { IconRefreshService } from './icon-refresh.service.js';
 
 // The columns that hold credentials, as the service writes them.
 interface CredentialColumns {
@@ -44,6 +45,7 @@ export class ConnectionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly secretStore: SecretStore,
+    private readonly iconRefresh: IconRefreshService,
   ) {}
 
   // The owner's connections, sorted by display name, ignoring case.
@@ -121,6 +123,7 @@ export class ConnectionsService {
           include: CONNECTION_INCLUDE,
         });
       });
+      this.iconRefresh.refreshConnectionInBackground(row.id, input.url);
       return toConnectionModel(row);
     } catch (error) {
       throw toDomainError(error, 'Connection');
@@ -194,6 +197,9 @@ export class ConnectionsService {
         },
         include: CONNECTION_INCLUDE,
       });
+      if (urlChanged && input.url !== undefined) {
+        this.iconRefresh.refreshConnectionInBackground(row.id, input.url);
+      }
       return toConnectionModel(updated);
     } catch (error) {
       throw toDomainError(error, 'Connection');

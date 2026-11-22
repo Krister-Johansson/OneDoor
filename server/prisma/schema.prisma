@@ -41,6 +41,9 @@ model CatalogEntry {
   key         String              @unique
   displayName String              @unique @map("display_name") @db.Citext
   description String              @default("")
+  /// REQ-CONN-070. Null until the icon is fetched; the letter icon applies then.
+  iconId      String?             @map("icon_id") @db.Uuid
+  icon        Icon?               @relation(fields: [iconId], references: [id], onDelete: SetNull)
   createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
   authOptions CatalogAuthOption[]
@@ -106,6 +109,9 @@ model Connection {
   oauthClientSecretCiphertext String?            @map("oauth_client_secret_ciphertext")
   oauthClientSecretKeyId      String?            @map("oauth_client_secret_key_id")
   enabled                     Boolean            @default(true)
+  /// REQ-CONN-070, custom connections only; catalog-based ones use the entry's icon.
+  iconId                      String?            @map("icon_id") @db.Uuid
+  icon                        Icon?              @relation(fields: [iconId], references: [id], onDelete: SetNull)
   createdAt                   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -113,4 +119,21 @@ model Connection {
   @@unique([ownerId, catalogEntryId])
   @@index([catalogEntryId])
   @@map("connection")
+}
+
+/// The bytes of a server icon, fetched once and served from OneDoor's own
+/// origin (REQ-CONN-071). Rows with the same bytes are shared.
+model Icon {
+  id             String         @id @default(uuid(7)) @db.Uuid
+  /// One of image/png, image/jpeg, image/webp, image/gif,
+  /// image/vnd.microsoft.icon or image/svg+xml, read from the bytes.
+  contentType    String         @map("content_type")
+  bytes          Bytes
+  /// SHA-256 of the bytes, hex.
+  sha256         String         @unique
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  connections    Connection[]
+  catalogEntries CatalogEntry[]
+
+  @@map("icon")
 }

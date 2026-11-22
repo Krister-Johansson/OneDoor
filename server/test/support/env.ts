@@ -14,4 +14,6 @@ export function stubAppEnv(
   vi.stubEnv('REDIS_URL', urls.REDIS_URL ?? 'redis://127.0.0.1:1');
   vi.stubEnv('SECRET_STORE_KEY_ID', 'test-1');
   vi.stubEnv('SECRET_STORE_KEY', randomBytes(32).toString('base64'));
+  // Icon fetching would reach the network; icon tests turn it back on.
+  vi.stubEnv('ICON_FETCHING', 'false');
 }

@@ -78,6 +78,12 @@ export class ConnectionModel {
   @Field(() => SetupState)
   setupState: SetupState;
 
+  @Field({
+    description:
+      "The icon's URL path on this server: a stored icon, or the generated letter icon (REQ-CONN-070).",
+  })
+  iconUrl: string;
+
   @Field({ description: 'Whether the gateway uses it (REQ-CONN-051).' })
   enabled: boolean;
 

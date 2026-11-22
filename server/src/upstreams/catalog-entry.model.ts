@@ -39,6 +39,9 @@ export class CatalogEntryModel {
   @Field()
   description: string;
 
+  @Field({ description: "The icon's URL path on this server (REQ-CONN-070)." })
+  iconUrl: string;
+
   @Field(() => [CatalogAuthOptionModel], {
     description: 'In the order of the AuthType enum.',
   })

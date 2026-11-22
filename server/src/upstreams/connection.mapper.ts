@@ -5,6 +5,7 @@ import type {
   Connection,
 } from '../generated/prisma/client.js';
 import { AuthType } from '../generated/prisma/enums.js';
+import { iconPath } from '../icons/icons.service.js';
 import { type ConnectionModel, SetupState } from './connection.model.js';
 
 // Every query that maps to ConnectionModel loads these relations.
@@ -63,6 +64,10 @@ export function toConnectionModel(row: ConnectionRow): ConnectionModel {
     oauthClientId: row.oauthClientId,
     hasClientSecret: row.oauthClientSecretCiphertext !== null,
     setupState: setupStateOf(authType, hasApiKey),
+    iconUrl: iconPath(
+      row.catalogEntry ? row.catalogEntry.iconId : row.iconId,
+      displayName,
+    ),
     enabled: row.enabled,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
