@@ -21,12 +21,12 @@ Work one task at a time, in order, each on its own branch. A task is done when `
 - [x] T10 Catalog. Catalog entries with auth options, GitHub (API key) and Context7 (OAuth with DCR, or API key) in the seed, the `catalog` query, `switchOnCatalogEntry`, and API keys for catalog-based connections (migration `20261122002230_catalog_auth_options`).
 - [x] T11 Probe and credentials check. `GuardedFetch` in `NetModule` with the network rules, `probeServer` (MCP initialize and OAuth discovery) and `checkCredentials`, and the first test twins.
 - [x] T12 Server icons. MCP icons, then the favicon, then a letter icon, fetched in the background through `GuardedFetch`, checked from the bytes, and served from `/icons` (migration `20261122004055_icons`).
+- [x] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql` into `src/gql/graphql.ts`, the `codegen` script and its drift check in web `verify`, and the Nitro proxy for `/graphql` and `/icons`.
 
 ## Connections
 
 Spec: `specs/connections.md`.
 
-- [ ] T13 Web GraphQL client. Apollo Client 4 through `@apollo/client-integration-tanstack-start`, GraphQL Code Generator reading `../server/schema.gql`, a `codegen` script, and a codegen drift check in web `verify`. Checkpoint: codegen setup.
 - [ ] T14 Servers screen. First route, with the catalog section and "My servers" (REQ-CONN-080). `useConnections()` and `useCatalog()` in `src/hooks/`, shadcn components added with the shadcn CLI. Checkpoint: first route, first hook wrapper.
 - [ ] T15 Add and edit dialogs. The add dialog with probe pre-fill and the credentials check, the edit form with write-only secret fields that show "Set" or "Not set", and remove with confirmation. Covers REQ-CONN-081 and 082.
 

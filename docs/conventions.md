@@ -622,3 +622,45 @@ refreshConnectionInBackground(connectionId: string, url: string): void {
 ### Files served from OneDoor's own origin
 
 Content that came from another host, such as icons, is stored and served by OneDoor, never linked. A route that serves it sets `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, and takes the content type from what OneDoor detected in the bytes.
+
+## Web GraphQL client
+
+Approved 2026-11-22.
+
+### Operations and codegen
+
+Operations live in `.graphql` files under `web/src/graphql/`, one file per feature. GraphQL Code Generator reads `../server/schema.gql` as a file and writes one committed file, `web/src/gql/graphql.ts`, with a typed document per operation:
+
+```text
+web/
+├── codegen.ts                  schema, documents, plugins
+└── src/
+    ├── graphql/
+    │   └── connections.graphql query Connections { ... }
+    └── gql/
+        └── graphql.ts          generated: ConnectionsQuery, ConnectionsDocument
+```
+
+- After changing an operation or pulling a new `schema.gql`, run `pnpm codegen` and commit `src/gql/graphql.ts`. Web `verify` runs `codegen` and then `check-codegen`, so it fails when the committed file differs.
+- The plugins are `typescript-operations` and `typed-document-node`, with `enumsAsTypes`. The file holds types only for what the operations use. Do not add the client preset (its `gql.ts` uses `any`) or the `typescript` plugin (it declares the enums a second time).
+- Never edit `src/gql/` by hand.
+
+### Using a document
+
+Pass the generated document to Apollo's hooks, with no type arguments:
+
+```ts
+import { useQuery } from "@apollo/client/react"
+import { ConnectionsDocument } from "#/gql/graphql"
+
+const { data } = useQuery(ConnectionsDocument)
+```
+
+Data needed when the page renders on the server comes from `preloadQuery` in the route loader. `useQuery` alone renders the loading state on the server.
+
+### Client and endpoint
+
+- `src/router.tsx` creates a new `ApolloClient` per router, imported with `InMemoryCache` and `routerWithApolloClient` from `@apollo/client-integration-tanstack-start`, and wraps the router with `routerWithApolloClient`. The root route uses `createRootRouteWithContext<ApolloClientIntegration.RouterContext>()`.
+- `graphqlEndpoint()` in `src/lib/graphql-endpoint.ts` is the GraphQL URL: `/graphql` in the browser, `${API_URL}/graphql` on the server.
+- The browser talks only to the web server. Nitro `routeRules` in `vite.config.ts` forward `/graphql` and `/icons/**` to `API_URL` (default `http://127.0.0.1:3000`). Vite's `server.proxy` has no effect under Nitro.
+- `API_URL` is listed in `web/.env.example`.
