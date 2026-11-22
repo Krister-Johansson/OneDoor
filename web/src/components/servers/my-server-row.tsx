@@ -67,7 +67,7 @@ export function MyServerRow({ connection }: { connection: Connection }) {
           {connection.enabled ? "Enabled" : "Disabled"}
         </Badge>
         <ConnectionStatusBadge status={connection.status} />
-        <ToolCountBadge toolCount={connection.toolCount} />
+        <ToolCountBadge connection={connection} />
         <ResyncToolsButton
           connection={connection}
           serverName={connection.displayName}

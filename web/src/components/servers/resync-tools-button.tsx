@@ -17,7 +17,8 @@ interface ResyncToolsButtonProps {
 }
 
 // Queues a sync of the connection's tools and shows "Syncing" until it
-// finishes. A sync needs a connected client.
+// finishes. A sync needs a connected client, so the button shows only while
+// the connection is connected.
 export function ResyncToolsButton({
   connection,
   serverName,
@@ -54,12 +55,13 @@ export function ResyncToolsButton({
     }
   }
 
+  if (!connected) return null
   const busy = loading || waiting
   return (
     <Button
       variant="outline"
       size="sm"
-      disabled={!connected || busy}
+      disabled={busy}
       onClick={() => void start()}
     >
       {busy ? "Syncing tools…" : "Re-sync tools"}

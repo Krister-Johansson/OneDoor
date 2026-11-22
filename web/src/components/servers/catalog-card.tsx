@@ -82,7 +82,7 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
         {connection && (
           <div className="flex flex-wrap items-center gap-2">
             <ConnectionStatusBadge status={connection.status} />
-            <ToolCountBadge toolCount={connection.toolCount} />
+            <ToolCountBadge connection={connection} />
             <ResyncToolsButton
               connection={connection}
               serverName={entry.displayName}

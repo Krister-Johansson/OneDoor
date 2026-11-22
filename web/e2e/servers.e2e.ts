@@ -130,9 +130,10 @@ test("shows a server's tool count live and re-syncs its tools (T18)", async ({
   await page.goto("/servers")
   const row = page.getByRole("listitem").filter({ hasText: "Synced Twin" })
   const resync = row.getByRole("button", { name: "Re-sync tools" })
+  // A connection that never synced shows no count, and no re-sync while it
+  // is not connected.
   await expect(row).toContainText("Unreachable")
-  await expect(row).toContainText("0 tools")
-  await expect(resync).toBeDisabled()
+  await expect(row).not.toContainText("tools")
 
   // The page does not reload or refetch: the count arrives over the socket
   // once the first sync finishes.
@@ -149,4 +150,14 @@ test("shows a server's tool count live and re-syncs its tools (T18)", async ({
   await expect(resync).toBeEnabled()
   await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
   await expect(row.getByRole("alert")).toHaveCount(0)
+
+  // An unreachable server keeps its tools and hides the button.
+  await graphql(
+    request,
+    "mutation ($id: ID!, $input: UpdateConnectionInput!) { updateConnection(id: $id, input: $input) { id } }",
+    { id, input: { url: "http://127.0.0.1:1/mcp" } },
+  )
+  await expect(row).toContainText("Unreachable")
+  await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
+  await expect(resync).toHaveCount(0)
 })
