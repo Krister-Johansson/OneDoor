@@ -897,6 +897,26 @@ web/src/
 - Each route sets its title in `head`: `"<Screen> · OneDoor"`.
 - Layout works at 375 px with no horizontal scroll: `p-4 sm:p-8` on the page, and rows that wrap.
 
+### Routes with a path param
+
+Approved 2026-11-23. A detail page under a screen's path is a sibling file with a trailing `_` on the parent segment, so it renders on its own and not inside the parent screen's component. `servers_.$connectionId.tsx` serves `/servers/$connectionId`, and the sidebar's fuzzy match keeps Servers active.
+
+```ts
+export const Route = createFileRoute("/servers_/$connectionId")({
+  loader: ({ context: { preloadQuery }, params: { connectionId } }) => {
+    preloadQuery(ConnectionToolsDocument, { variables: { id: connectionId } })
+  },
+  head: () => ({ meta: [{ title: "Server · OneDoor" }] }),
+  component: ServerPage,
+  errorComponent: ServerError,
+})
+```
+
+- The route component reads the param with `Route.useParams()` and passes the id to its sections, which call their hooks with it.
+- When the `<h1>` shows loaded data, a header component in `src/components/<screen>/` renders it (`server-header.tsx`).
+- The route's `errorComponent` maps `errorCode(error)` to a message in `role="alert"`, with `NOT_FOUND` as its own case, and links back to the parent screen.
+- A link styled as a button is a `Link` with `className={buttonVariants({ variant, size })}`.
+
 ### App shell
 
 Approved 2026-11-22.
@@ -943,6 +963,8 @@ export const Route = createFileRoute("/servers")({
 ```
 
 The loader does not return the query refs. The hooks read the results from the cache, so they take no arguments.
+
+A query hook whose list a background job can change refetches when that job's event arrives for its object. `useConnectionTools(id)` calls `useConnectionToolSyncs` with a callback that refetches when the id matches, so added and removed tools show.
 
 ### Mutation hooks
 
