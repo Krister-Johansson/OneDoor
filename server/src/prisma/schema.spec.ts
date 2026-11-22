@@ -15,6 +15,7 @@ describe('database schema', () => {
   let meId: string;
   let otherId: string;
   let catalogEntryId: string;
+  let optionId: string;
 
   beforeAll(async () => {
     container = await startMigratedPostgres();
@@ -25,18 +26,23 @@ describe('database schema', () => {
 
     meId = (await prisma.user.findUniqueOrThrow({ where: { name: 'me' } })).id;
     otherId = (await prisma.user.create({ data: { name: 'other' } })).id;
-    catalogEntryId = (
-      await prisma.catalogEntry.create({
-        data: {
-          key: 'acme',
-          displayName: 'Acme',
-          url: 'https://mcp.acme.test/mcp',
-          authType: 'API_KEY',
-          headerName: 'Authorization',
-          headerPrefix: 'Bearer',
+    const entry = await prisma.catalogEntry.create({
+      data: {
+        key: 'acme',
+        displayName: 'Acme',
+        authOptions: {
+          create: {
+            authType: 'API_KEY',
+            url: 'https://mcp.acme.test/mcp',
+            headerName: 'Authorization',
+            headerPrefix: 'Bearer',
+          },
         },
-      })
-    ).id;
+      },
+      include: { authOptions: true },
+    });
+    catalogEntryId = entry.id;
+    optionId = entry.authOptions[0]?.id ?? '';
   }, 120_000);
 
   afterAll(async () => {
@@ -80,20 +86,35 @@ describe('database schema', () => {
   });
 
   it('allows one connection per catalog entry per owner (REQ-CONN-012)', async () => {
-    await prisma.connection.create({ data: { ownerId: meId, catalogEntryId } });
+    await prisma.connection.create({
+      data: { ownerId: meId, catalogEntryId, catalogAuthOptionId: optionId },
+    });
     const error = await prisma.connection
-      .create({ data: { ownerId: meId, catalogEntryId } })
+      .create({
+        data: { ownerId: meId, catalogEntryId, catalogAuthOptionId: optionId },
+      })
       .catch((e: unknown) => e);
     expect(toDomainError(error, 'Connection')).toBeInstanceOf(ConflictError);
     await expect(
-      prisma.connection.create({ data: { ownerId: otherId, catalogEntryId } }),
+      prisma.connection.create({
+        data: {
+          ownerId: otherId,
+          catalogEntryId,
+          catalogAuthOptionId: optionId,
+        },
+      }),
     ).resolves.toBeDefined();
   });
 
   it('rejects a catalog-based connection with its own URL', async () => {
     await expect(
       prisma.connection.create({
-        data: { ownerId: otherId, catalogEntryId, url: 'https://evil.test' },
+        data: {
+          ownerId: otherId,
+          catalogEntryId,
+          catalogAuthOptionId: optionId,
+          url: 'https://evil.test',
+        },
       }),
     ).rejects.toThrow(/connection_catalog_or_custom_check/);
   });
@@ -149,5 +170,59 @@ describe('database schema', () => {
       .delete({ where: { id: catalogEntryId } })
       .catch((e: unknown) => e);
     expect(toDomainError(error, 'Catalog entry')).toBeInstanceOf(ConflictError);
+  });
+
+  it('seeds the GitHub and Context7 catalog entries once (REQ-CONN-010)', async () => {
+    await seed(prisma);
+    const entries = await prisma.catalogEntry.findMany({
+      where: { key: { in: ['github', 'context7'] } },
+      include: { authOptions: { orderBy: { authType: 'asc' } } },
+      orderBy: { key: 'asc' },
+    });
+    expect(
+      entries.map((e) => [e.key, e.authOptions.map((o) => o.authType)]),
+    ).toEqual([
+      ['context7', ['API_KEY', 'OAUTH_DCR']],
+      ['github', ['API_KEY']],
+    ]);
+  });
+
+  it('rejects a catalog-based connection without an auth option', async () => {
+    const user = await prisma.user.create({ data: { name: 'no-option' } });
+    await expect(
+      prisma.connection.create({ data: { ownerId: user.id, catalogEntryId } }),
+    ).rejects.toThrow(/connection_catalog_or_custom_check/);
+  });
+
+  it("rejects another entry's auth option", async () => {
+    const user = await prisma.user.create({ data: { name: 'wrong-option' } });
+    const github = await prisma.catalogEntry.findUniqueOrThrow({
+      where: { key: 'github' },
+    });
+    await expect(
+      prisma.connection.create({
+        data: {
+          ownerId: user.id,
+          catalogEntryId: github.id,
+          catalogAuthOptionId: optionId,
+        },
+      }),
+    ).rejects.toThrow(
+      /connection_catalog_entry_id_catalog_auth_option_id_fkey/,
+    );
+  });
+
+  it('requires header settings on an API_KEY auth option', async () => {
+    await expect(
+      prisma.catalogAuthOption.create({
+        data: {
+          catalogEntryId,
+          authType: 'NONE',
+          url: 'https://x.test',
+          headerName: 'Authorization',
+          headerPrefix: '',
+        },
+      }),
+    ).rejects.toThrow(/catalog_auth_option_api_key_header_check/);
   });
 });

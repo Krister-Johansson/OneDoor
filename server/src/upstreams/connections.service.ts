@@ -7,7 +7,6 @@ import {
   NotFoundError,
   ValidationError,
 } from '../errors/domain-errors.js';
-import type { CatalogEntry, Connection } from '../generated/prisma/client.js';
 import { AuthType } from '../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { toDomainError } from '../prisma/prisma-error.mapper.js';
@@ -15,13 +14,16 @@ import type {
   CreateConnectionInput,
   UpdateConnectionInput,
 } from './connection.input.js';
-import { type ConnectionModel, SetupState } from './connection.model.js';
+import {
+  CONNECTION_INCLUDE,
+  type ConnectionRow,
+  toConnectionModel,
+} from './connection.mapper.js';
+import type { ConnectionModel } from './connection.model.js';
 import {
   DEFAULT_HEADER_NAME,
   DEFAULT_HEADER_PREFIX,
 } from './connection-rules.js';
-
-type ConnectionRow = Connection & { catalogEntry: CatalogEntry | null };
 
 // The columns that hold credentials, as the service writes them.
 interface CredentialColumns {
@@ -50,7 +52,7 @@ export class ConnectionsService {
     try {
       rows = await this.prisma.connection.findMany({
         where: { ownerId },
-        include: { catalogEntry: true },
+        include: CONNECTION_INCLUDE,
       });
     } catch (error) {
       throw toDomainError(error, 'Connection');
@@ -116,7 +118,7 @@ export class ConnectionsService {
         return tx.connection.update({
           where: { id: created.id },
           data: credentials,
-          include: { catalogEntry: true },
+          include: CONNECTION_INCLUDE,
         });
       });
       return toConnectionModel(row);
@@ -133,10 +135,18 @@ export class ConnectionsService {
     input: UpdateConnectionInput,
   ): Promise<ConnectionModel> {
     const row = await this.findRow(ownerId, id);
-    if (row.catalogEntryId !== null || row.authType === null) {
-      throw new ValidationError(
-        'A catalog-based connection takes its settings from the catalog entry',
+    if (row.catalogAuthOption !== null) {
+      return this.updateCatalogCredentials(
+        ownerId,
+        row,
+        row.catalogAuthOption.authType,
+        input,
       );
+    }
+    if (row.authType === null) {
+      throw new InternalError({
+        cause: new Error(`Custom connection ${row.id} has no auth type`),
+      });
     }
 
     const authType = input.authType ?? row.authType;
@@ -182,7 +192,7 @@ export class ConnectionsService {
           authType,
           ...credentials,
         },
-        include: { catalogEntry: true },
+        include: CONNECTION_INCLUDE,
       });
       return toConnectionModel(updated);
     } catch (error) {
@@ -201,7 +211,7 @@ export class ConnectionsService {
       const row = await this.prisma.connection.update({
         where: { id, ownerId },
         data: { enabled },
-        include: { catalogEntry: true },
+        include: CONNECTION_INCLUDE,
       });
       return toConnectionModel(row);
     } catch (error) {
@@ -220,13 +230,47 @@ export class ConnectionsService {
     }
   }
 
+  // REQ-CONN-013: a catalog-based connection may change only its
+  // credentials. Its other settings come from the entry and auth option.
+  private async updateCatalogCredentials(
+    ownerId: string,
+    row: ConnectionRow,
+    authType: AuthType,
+    input: UpdateConnectionInput,
+  ): Promise<ConnectionModel> {
+    const { apiKey, ...others } = input;
+    if (Object.values(others).some((value) => value !== undefined)) {
+      throw new ValidationError(
+        'A catalog-based connection takes its settings from the catalog entry; only its credentials can change',
+      );
+    }
+    assertOnlyFieldsFor(authType, { apiKey });
+    const secret = await this.applySecret(row.id, 'api_key', apiKey, {
+      ciphertext: row.apiKeyCiphertext,
+      keyId: row.apiKeyKeyId,
+    });
+    try {
+      const updated = await this.prisma.connection.update({
+        where: { id: row.id, ownerId },
+        data: {
+          apiKeyCiphertext: secret.ciphertext,
+          apiKeyKeyId: secret.keyId,
+        },
+        include: CONNECTION_INCLUDE,
+      });
+      return toConnectionModel(updated);
+    } catch (error) {
+      throw toDomainError(error, 'Connection');
+    }
+  }
+
   private async findRow(ownerId: string, id: string): Promise<ConnectionRow> {
     assertUuid(id);
     let row: ConnectionRow | null;
     try {
       row = await this.prisma.connection.findFirst({
         where: { id, ownerId },
-        include: { catalogEntry: true },
+        include: CONNECTION_INCLUDE,
       });
     } catch (error) {
       throw toDomainError(error, 'Connection');
@@ -379,51 +423,5 @@ function credentialsOf(row: ConnectionRow): CredentialColumns {
     oauthClientId: row.oauthClientId,
     oauthClientSecretCiphertext: row.oauthClientSecretCiphertext,
     oauthClientSecretKeyId: row.oauthClientSecretKeyId,
-  };
-}
-
-// REQ-CONN-044.
-function setupStateOf(authType: AuthType, hasApiKey: boolean): SetupState {
-  switch (authType) {
-    case AuthType.NONE:
-      return SetupState.READY;
-    case AuthType.API_KEY:
-      return hasApiKey ? SetupState.READY : SetupState.NEEDS_CREDENTIALS;
-    case AuthType.OAUTH_DCR:
-    case AuthType.OAUTH_MANUAL:
-      return SetupState.NEEDS_CREDENTIALS;
-  }
-}
-
-// A catalog-based connection takes these fields from its entry (REQ-CONN-012).
-// The check constraint connection_catalog_or_custom_check guarantees that one
-// of the two sources has them.
-function toConnectionModel(row: ConnectionRow): ConnectionModel {
-  const source = row.catalogEntry ?? row;
-  const { displayName, url, authType } = source;
-  if (displayName === null || url === null || authType === null) {
-    throw new InternalError({
-      cause: new Error(
-        `Connection ${row.id} has no display name, URL or auth type`,
-      ),
-    });
-  }
-  const hasApiKey = row.apiKeyCiphertext !== null;
-  return {
-    id: row.id,
-    catalogEntryId: row.catalogEntryId,
-    displayName,
-    description: source.description ?? '',
-    url,
-    authType,
-    headerName: source.headerName,
-    headerPrefix: source.headerPrefix,
-    hasApiKey,
-    oauthClientId: row.oauthClientId,
-    hasClientSecret: row.oauthClientSecretCiphertext !== null,
-    setupState: setupStateOf(authType, hasApiKey),
-    enabled: row.enabled,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
   };
 }

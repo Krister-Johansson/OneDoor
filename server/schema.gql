@@ -7,6 +7,35 @@ enum AuthType {
 }
 
 """
+One way to connect to a catalog entry: an auth type with its URL (REQ-CONN-010).
+"""
+type CatalogAuthOption {
+  authType: AuthType!
+
+  """Only for API_KEY."""
+  headerName: String
+
+  """Only for API_KEY. May be empty."""
+  headerPrefix: String
+  url: String!
+}
+
+"""A pre-installed server that the caller can switch on."""
+type CatalogEntry {
+  """In the order of the AuthType enum."""
+  authOptions: [CatalogAuthOption!]!
+
+  """The caller's connection for this entry, if any (REQ-CONN-011)."""
+  connection: Connection
+  description: String!
+  displayName: String!
+  id: ID!
+
+  """A stable identifier, such as github."""
+  key: String!
+}
+
+"""
 A user's link to one MCP server. A catalog-based connection shows its catalog entry's name, description, URL, auth type and header settings.
 """
 type Connection {
@@ -88,11 +117,21 @@ type Mutation {
   """Enables or disables a connection (REQ-CONN-051)."""
   setConnectionEnabled(enabled: Boolean!, id: ID!): Connection!
 
+  """
+  Switches on a catalog entry with one of its auth options and returns the connection (REQ-CONN-012). Switch it off with setConnectionEnabled.
+  """
+  switchOnCatalogEntry(authType: AuthType!, catalogEntryId: ID!): Connection!
+
   """Changes a custom server (REQ-CONN-023, REQ-CONN-042)."""
   updateConnection(id: ID!, input: UpdateConnectionInput!): Connection!
 }
 
 type Query {
+  """
+  Every catalog entry, sorted by display name, with the caller's connection (REQ-CONN-011).
+  """
+  catalog: [CatalogEntry!]!
+
   """One of the caller's connections. NOT_FOUND otherwise."""
   connection(id: ID!): Connection!
 

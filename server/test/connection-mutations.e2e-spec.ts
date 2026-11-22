@@ -87,13 +87,19 @@ describe('connection mutations (e2e)', () => {
       data: {
         key: 'catalog',
         displayName: 'Catalog Server',
-        url: 'https://catalog.test/mcp',
-        authType: 'NONE',
+        authOptions: {
+          create: { authType: 'NONE', url: 'https://catalog.test/mcp' },
+        },
       },
+      include: { authOptions: true },
     });
     catalogConnectionId = (
       await prisma.connection.create({
-        data: { ownerId: me.id, catalogEntryId: entry.id },
+        data: {
+          ownerId: me.id,
+          catalogEntryId: entry.id,
+          catalogAuthOptionId: entry.authOptions[0]?.id,
+        },
       })
     ).id;
 
@@ -325,10 +331,16 @@ describe('connection mutations (e2e)', () => {
       });
     });
 
-    it('answers VALIDATION for a catalog-based connection', async () => {
-      const body = await update(catalogConnectionId, { description: 'x' });
-      expect(codeOf(body)).toBe('VALIDATION');
-    });
+    it.each([
+      ['a setting', { description: 'x' }],
+      ['an API key for its NONE option', { apiKey: API_KEY }],
+    ])(
+      'answers VALIDATION for %s of a catalog-based connection (REQ-CONN-013)',
+      async (_name, input) => {
+        const body = await update(catalogConnectionId, input);
+        expect(codeOf(body)).toBe('VALIDATION');
+      },
+    );
 
     it("answers NOT_FOUND for another user's connection", async () => {
       const body = await update(otherConnectionId, { description: 'x' });

@@ -39,11 +39,16 @@ describe('connections query (e2e)', () => {
         key: 'acme',
         displayName: 'Acme Catalog',
         description: 'From the catalog',
-        url: 'https://mcp.acme.test/mcp',
-        authType: 'API_KEY',
-        headerName: 'Authorization',
-        headerPrefix: 'Bearer',
+        authOptions: {
+          create: {
+            authType: 'API_KEY',
+            url: 'https://mcp.acme.test/mcp',
+            headerName: 'Authorization',
+            headerPrefix: 'Bearer',
+          },
+        },
       },
+      include: { authOptions: true },
     });
     ids.custom = (
       await prisma.connection.create({
@@ -57,7 +62,12 @@ describe('connections query (e2e)', () => {
     ).id;
     ids.catalog = (
       await prisma.connection.create({
-        data: { ownerId: me.id, catalogEntryId: entry.id, enabled: false },
+        data: {
+          ownerId: me.id,
+          catalogEntryId: entry.id,
+          catalogAuthOptionId: entry.authOptions[0]?.id,
+          enabled: false,
+        },
       })
     ).id;
     ids.foreign = (
