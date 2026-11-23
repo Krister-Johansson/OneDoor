@@ -886,6 +886,7 @@ export function useConnectionStatusChanges(): void {
 ```
 
 - A component that shows a live value wraps it in `aria-live="polite"`, so screen readers announce the change.
+- `createLink(onConnected)` in `src/router.tsx` passes `on: { connected }` to the graphql-ws client, and the router refetches the active queries each time the socket opens. Events published before the socket opens are not replayed, so this covers a page load and a reconnect. Flows need no API polling for a first sync.
 
 ### Waiting for background work
 
@@ -931,6 +932,15 @@ web/src/
 - Each route sets its title in `head`: `"<Screen> · OneDoor"`.
 - Layout works at 375 px with no horizontal scroll: `p-4 sm:p-8` on the page, and rows that wrap.
 
+### Lists and detail pages
+
+Approved 2026-11-23. A screen that lists objects shows them as cards in a grid (`<ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">`), and every action on an object lives on its detail page.
+
+- A card (`ServerCard`) shows the icon, the name, one detail line (the tool count) and one short state at the right (`ConnectionSummary`). A card for an object with a page is a link to it. A card that has no page yet holds the one action that creates it ("Add"), then navigates to the new page.
+- The detail page has a back link with `aria-label="Back to <screen>"`, a header with the name, description and the action the object needs first, a settings panel (`ConnectionPanel`) as a bordered list of rows, and the object's children.
+- Children are an `Accordion` with `multiple`, inside a bordered card. A row's trigger holds the name; a control that belongs to the row, such as a switch, sits next to the trigger, never inside it. A search box above filters the rows on the client when the list can be long.
+- Several components of one page may read the same query. A hook that refreshes it on an event calls `client.refetchQueries`, never the suspense hook's `refetch()`, which suspends the page again.
+
 ### Routes with a path param
 
 Approved 2026-11-23. A detail page under a screen's path is a sibling file with a trailing `_` on the parent segment, so it renders on its own and not inside the parent screen's component. `servers_.$connectionId.tsx` serves `/servers/$connectionId`, and the sidebar's fuzzy match keeps Servers active.
@@ -950,6 +960,15 @@ export const Route = createFileRoute("/servers_/$connectionId")({
 - When the `<h1>` shows loaded data, a header component in `src/components/<screen>/` renders it (`server-header.tsx`).
 - The route's `errorComponent` maps `errorCode(error)` to a message in `role="alert"`, with `NOT_FOUND` as its own case, and links back to the parent screen.
 - A link styled as a button is a `Link` with `className={buttonVariants({ variant, size })}`.
+
+
+### Results in the URL
+
+Approved 2026-11-23. A server redirect that reports a result to web uses one search param with a fixed set of values, such as `?oauth=authorized|denied|failed|expired` from the OAuth callback.
+
+- The route reads it with `validateSearch` and a parser in `src/lib/` (`oauthSearch`) that keeps only the known values, so other values are dropped and links to the route need no search.
+- The page shows it once in a message component with `role="status"` for success and `role="alert"` otherwise. Dismiss navigates with `search: {}` and `replace: true`.
+- A button that leaves for another site (`AuthorizeButton`) gets the URL from a mutation and calls `window.location.assign(url)`. It renders only when its action can work: for Authorize, an enabled `OAUTH_DCR` connection without tokens.
 
 ### App shell
 
