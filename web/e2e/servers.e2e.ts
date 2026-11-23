@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { OAUTH_APP } from "./global-setup"
 import { OPEN_TWIN_TITLE, OPEN_TWIN_TOOLS } from "./twins/open-twin"
 
 function twinUrl(): string {
@@ -294,4 +295,41 @@ test("explains an OAuth return that cannot be finished (T21)", async ({
   await expect(page.getByRole("alert")).toHaveText(
     "That authorization link expired or was already used. Start the authorization again.",
   )
+})
+
+test("adds a server with an OAuth app, shows the redirect URI, and authorizes it (T22)", async ({
+  page,
+}) => {
+  const appTwinUrl = process.env.E2E_OAUTH_APP_TWIN_URL
+  if (!appTwinUrl) throw new Error("E2E_OAUTH_APP_TWIN_URL is not set")
+
+  await page.goto("/servers")
+  await page.getByRole("button", { name: "Add server" }).first().click()
+  const dialog = page.getByRole("dialog", { name: /Add server/ })
+  await dialog.getByLabel("MCP server URL").fill(appTwinUrl)
+  await dialog.getByLabel("MCP server URL").blur()
+  await dialog.getByLabel("Display name").fill("App Twin")
+  await dialog.getByRole("combobox", { name: "Authentication" }).click()
+  await page.getByRole("option", { name: "OAuth with client details" }).click()
+
+  // The owner registers this URI in the OAuth app before authorizing.
+  await expect(dialog.getByText(/\/oauth\/callback$/)).toBeVisible()
+  await dialog.getByLabel("Client id").fill(OAUTH_APP.id)
+  await dialog.getByLabel("Client secret").fill(OAUTH_APP.secret)
+  await dialog.getByRole("button", { name: "Add server" }).click()
+  await expect(dialog).toBeHidden()
+
+  const server = page.getByRole("listitem").filter({ hasText: "App Twin" })
+  await expect(server).toContainText("Needs credentials")
+  await server.getByRole("link").click()
+  await page.getByRole("button", { name: "Authorize" }).click()
+
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}\?oauth=authorized$/)
+  await expect(page.getByRole("status")).toHaveText(
+    "Authorized. OneDoor is connecting to the server.",
+  )
+  const connection = page.getByRole("region", { name: "Connection" })
+  await expect(connection).toContainText("OAuth with client details")
+  await expect(connection).toContainText("Connected")
+  await expect(page.getByRole("switch", { name: "Use alpha" })).toBeVisible()
 })

@@ -100,3 +100,9 @@ subscription ConnectionToolsSynced {
     toolCount
   }
 }
+
+# The redirect URI to register in an OAuth app for OAuth with client details
+# (T22). Not a secret.
+query OAuthRedirectUrl {
+  oauthRedirectUrl
+}

@@ -46,6 +46,7 @@ import {
   DEFAULT_HEADER_PREFIX,
 } from "#/lib/auth-type"
 import { errorCode } from "#/lib/graphql-error"
+import { RedirectUriNote } from "./redirect-uri-note"
 
 type ProbeResult = ProbeServerMutation["probeServer"]
 type CheckResult = CheckCredentialsMutation["checkCredentials"]
@@ -257,6 +258,7 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
   // The client details for OAuth with client details (REQ-CONN-081).
   const clientFields = () => (
     <>
+      <RedirectUriNote />
       <form.Field
         name="oauthClientId"
         validators={{

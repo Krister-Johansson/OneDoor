@@ -251,6 +251,10 @@ export type ConnectionToolsSyncedSubscription = {
   }
 }
 
+export type OAuthRedirectUrlQueryVariables = Exact<{ [key: string]: never }>
+
+export type OAuthRedirectUrlQuery = { oauthRedirectUrl: string }
+
 export type ProbeServerMutationVariables = Exact<{
   url: string
 }>
@@ -296,6 +300,7 @@ export type ConnectionToolsQuery = {
     url: string
     iconUrl: string
     authType: AuthType
+    oauthClientId: string | null
     oauthAuthorized: boolean
     setupState: SetupState
     enabled: boolean
@@ -964,6 +969,25 @@ export const ConnectionToolsSyncedDocument = {
   ConnectionToolsSyncedSubscription,
   ConnectionToolsSyncedSubscriptionVariables
 >
+export const OAuthRedirectUrlDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "OAuthRedirectUrl" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          { kind: "Field", name: { kind: "Name", value: "oauthRedirectUrl" } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  OAuthRedirectUrlQuery,
+  OAuthRedirectUrlQueryVariables
+>
 export const ProbeServerDocument = {
   kind: "Document",
   definitions: [
@@ -1127,6 +1151,10 @@ export const ConnectionToolsDocument = {
                 { kind: "Field", name: { kind: "Name", value: "url" } },
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
                 { kind: "Field", name: { kind: "Name", value: "authType" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "oauthClientId" },
+                },
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "oauthAuthorized" },

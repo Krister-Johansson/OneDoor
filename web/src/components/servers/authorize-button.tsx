@@ -7,6 +7,7 @@ interface AuthorizeButtonProps {
   connection: {
     id: string
     authType: AuthType
+    oauthClientId: string | null
     oauthAuthorized: boolean
     enabled: boolean
   }
@@ -16,8 +17,9 @@ interface AuthorizeButtonProps {
   onError: (message: string | null) => void
 }
 
-// Sends the browser to the server's authorization page (T21). It shows only
-// for an enabled OAUTH_DCR connection without tokens; the callback brings
+// Sends the browser to the server's authorization page (T21, T22). It shows
+// for an enabled OAuth connection without tokens that can authorize: DCR
+// always, client details once a client id is stored. The callback brings
 // the browser back with the outcome.
 export function AuthorizeButton({
   connection,
@@ -25,11 +27,11 @@ export function AuthorizeButton({
   onError,
 }: AuthorizeButtonProps) {
   const { start, loading } = useStartOAuthAuthorization()
-  if (
-    connection.authType !== "OAUTH_DCR" ||
-    connection.oauthAuthorized ||
-    !connection.enabled
-  ) {
+  const canAuthorize =
+    connection.authType === "OAUTH_DCR" ||
+    (connection.authType === "OAUTH_MANUAL" &&
+      connection.oauthClientId !== null)
+  if (!canAuthorize || connection.oauthAuthorized || !connection.enabled) {
     return null
   }
 
@@ -51,6 +53,8 @@ export function AuthorizeButton({
 
 function authorizeErrorMessage(error: unknown, name: string) {
   switch (errorCode(error)) {
+    case "VALIDATION":
+      return `${name} needs the client id of its OAuth app first. Edit the server to add it.`
     case "UPSTREAM_UNAVAILABLE":
       return `Could not reach the authorization server of ${name}. Try again later.`
     case "NOT_FOUND":
