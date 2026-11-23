@@ -37,35 +37,57 @@ test("adds a server through the dialog, with probe pre-fill and a credentials ch
 
   await dialog.getByRole("button", { name: "Add server" }).click()
   await expect(dialog).toBeHidden()
-  const row = page.getByRole("listitem").filter({ hasText: OPEN_TWIN_TITLE })
-  await expect(row).toContainText(twinUrl())
-  await expect(row).toContainText("No authentication")
-  await expect(row).toContainText("Enabled")
+  const server = page.getByRole("listitem").filter({ hasText: OPEN_TWIN_TITLE })
+  await expect(server).toContainText("Active")
+
+  // The card opens the server's page, which holds its settings.
+  await server.getByRole("link").click()
+  await expect(
+    page.getByRole("heading", { level: 1, name: OPEN_TWIN_TITLE }),
+  ).toBeVisible()
+  await expect(page.getByText(twinUrl())).toBeVisible()
+  const connection = page.getByRole("region", { name: "Connection" })
+  await expect(connection).toContainText("No authentication")
+  await expect(
+    connection.getByRole("switch", { name: `Use ${OPEN_TWIN_TITLE}` }),
+  ).toBeChecked()
 })
 
-test("switches catalog entries on and off, and asks for the auth option when there are two (REQ-CONN-080)", async ({
+test("adds catalog entries, turns them off on their page, and asks for the auth option when there are two (REQ-CONN-080)", async ({
   page,
 }) => {
   await page.goto("/servers")
 
+  // Adding an entry opens the new server's page, where its switch is.
+  await page.getByRole("button", { name: "Add GitHub" }).click()
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}$/)
   const github = page.getByRole("switch", { name: "Use GitHub" })
-  await expect(github).not.toBeChecked()
-  await github.click()
   await expect(github).toBeChecked()
   await github.click()
   await expect(github).not.toBeChecked()
+  await page.getByRole("link", { name: "Back to servers" }).click()
+  await expect(card(page, "GitHub")).toContainText("Off")
 
-  const context7 = page.getByRole("switch", { name: "Use Context7" })
-  await context7.click()
+  await page.getByRole("button", { name: "Add Context7" }).click()
   const choice = page.getByRole("dialog", { name: "Connect to Context7" })
   await choice.getByRole("button", { name: /DCR OAuth/ }).click()
   await expect(choice).toBeHidden()
-  await expect(context7).toBeChecked()
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}$/)
+  await expect(page.getByRole("switch", { name: "Use Context7" })).toBeChecked()
+  await expect(page.getByRole("region", { name: "Connection" })).toContainText(
+    "DCR OAuth · Needs credentials",
+  )
 
   // The choice is stored: after a reload the switch is still on.
   await page.reload()
   await expect(page.getByRole("switch", { name: "Use Context7" })).toBeChecked()
 })
+
+// The card of a server on the servers screen. It is a link to the server's
+// page once the server has a connection.
+function card(page: import("@playwright/test").Page, name: string) {
+  return page.getByRole("listitem").filter({ hasText: name })
+}
 
 // Changes a connection from outside the page, as another tab or the MCP
 // endpoint would, through the same /graphql the page uses.
@@ -98,8 +120,8 @@ test("shows the live status of a server's connection (T17)", async ({
   const id = data.createConnection?.id
 
   await page.goto("/servers")
-  const row = page.getByRole("listitem").filter({ hasText: "Live Twin" })
-  await expect(row).toContainText("Connected")
+  const row = card(page, "Live Twin")
+  await expect(row).toContainText("Active")
 
   // The page does not reload or refetch: the status arrives over the socket.
   await graphql(
@@ -127,13 +149,13 @@ test("shows a server's tool count live and re-syncs its tools (T18)", async ({
   )
   const id = data.createConnection?.id
 
-  await page.goto("/servers")
-  const row = page.getByRole("listitem").filter({ hasText: "Synced Twin" })
+  await page.goto(`/servers/${id}`)
+  const row = page.getByRole("region", { name: "Connection" })
   const resync = row.getByRole("button", { name: "Re-sync tools" })
   // A connection that never synced shows no count, and no re-sync while it
   // is not connected.
   await expect(row).toContainText("Unreachable")
-  await expect(row).not.toContainText("tools")
+  await expect(row).not.toContainText(/\d+ tools?\b/)
 
   // The page does not reload or refetch: the count arrives over the socket
   // once the first sync finishes.
@@ -175,21 +197,29 @@ test("opens a server's tools and disables one (T19)", async ({
   // fetch again when it does, so the count still shows.
 
   await page.goto("/servers")
-  const row = page.getByRole("listitem").filter({ hasText: "Tools Twin" })
+  const row = card(page, "Tools Twin")
   await expect(row).toContainText(`${OPEN_TWIN_TOOLS.length} tools`)
-  await row.getByRole("link", { name: "Tools" }).click()
+  await row.getByRole("link").click()
 
   await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}$/)
   await expect(
     page.getByRole("heading", { level: 1, name: "Tools Twin" }),
   ).toBeVisible()
   // The sidebar keeps the servers screen marked.
-  await expect(page.getByRole("link", { name: "Servers" })).toHaveAttribute(
-    "data-active",
-  )
-  const echo = page.getByRole("listitem").filter({ hasText: "echo" })
-  await expect(echo).toContainText("The echo tool.")
-  await expect(echo).toContainText("Read-only")
+  await expect(
+    page.getByRole("link", { name: "Servers", exact: true }),
+  ).toHaveAttribute("data-active")
+  // A tool opens to show its description and hints.
+  await expect(page.getByText("The echo tool.")).toBeHidden()
+  await page.getByRole("button", { name: "echo" }).click()
+  await expect(page.getByText("The echo tool.")).toBeVisible()
+  await expect(page.getByText("Read-only")).toBeVisible()
+
+  // The search keeps the tools that match.
+  await page.getByRole("searchbox", { name: "Search tools" }).fill("rev")
+  await expect(page.getByRole("switch", { name: "Use echo" })).toHaveCount(0)
+  await expect(page.getByRole("switch", { name: "Use reverse" })).toBeVisible()
+  await page.getByRole("searchbox", { name: "Search tools" }).fill("")
   const echoSwitch = page.getByRole("switch", { name: "Use echo" })
   await expect(echoSwitch).toBeChecked()
   await expect(page.getByRole("switch", { name: "Use reverse" })).toBeChecked()
@@ -232,11 +262,12 @@ test("authorizes an OAuth server through the browser and comes back to its page 
   )
 
   await page.goto("/servers")
-  const row = page.getByRole("listitem").filter({ hasText: "OAuth Twin" })
+  const row = card(page, "OAuth Twin")
   await expect(row).toContainText("Needs credentials")
+  await row.getByRole("link").click()
   // The browser leaves for the twin's /authorize, which sends it back to
   // /oauth/callback on the web server, which the API answers.
-  await row.getByRole("button", { name: "Authorize" }).click()
+  await page.getByRole("button", { name: "Authorize" }).click()
 
   await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}\?oauth=authorized$/)
   await expect(page.getByRole("status")).toHaveText(

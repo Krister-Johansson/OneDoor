@@ -1,7 +1,7 @@
 import { useCatalog } from "#/hooks/use-catalog"
 import { CatalogCard } from "./catalog-card"
 
-// The pre-installed servers the caller can switch on (REQ-CONN-080).
+// The pre-installed servers the caller can add (REQ-CONN-080).
 export function CatalogSection() {
   const catalog = useCatalog()
 
@@ -10,11 +10,11 @@ export function CatalogSection() {
       <h2 id="catalog-heading" className="text-lg font-semibold">
         Catalog
       </h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {catalog.map((entry) => (
           <CatalogCard key={entry.id} entry={entry} />
         ))}
-      </div>
+      </ul>
     </section>
   )
 }
