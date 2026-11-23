@@ -3,9 +3,7 @@ import {
   discoverOAuthServerInfo,
   extractResourceMetadataUrl,
   type FetchLike,
-  SdkHttpError,
   StreamableHTTPClientTransport,
-  UnauthorizedError,
 } from '@modelcontextprotocol/client';
 import { Injectable } from '@nestjs/common';
 import { ValidationError } from '../../../errors/domain-errors.js';
@@ -15,7 +13,9 @@ import {
   GuardedFetch,
 } from '../../../net/guarded-fetch.js';
 import { fetchUrlProblem } from '../../../net/url-policy.js';
+import { isCredentialsRefusal } from '../auth/credentials-refusal.js';
 import {
+  apiKeyHeaderValue,
   DEFAULT_HEADER_NAME,
   DEFAULT_HEADER_PREFIX,
 } from '../connections/connection-rules.js';
@@ -119,8 +119,7 @@ export class ProbeService {
       }
       const name = input.headerName ?? DEFAULT_HEADER_NAME;
       const prefix = input.headerPrefix ?? DEFAULT_HEADER_PREFIX;
-      headers[name] =
-        prefix === '' ? input.apiKey : `${prefix} ${input.apiKey}`;
+      headers[name] = apiKeyHeaderValue(prefix, input.apiKey);
       sensitiveHeaders = [name];
     } else if (input.apiKey || input.headerName || input.headerPrefix) {
       throw new ValidationError(
@@ -267,12 +266,7 @@ function classify(
       message: `The network rules stopped the request: ${rule.message}.`,
     };
   }
-  if (
-    error instanceof UnauthorizedError ||
-    (error instanceof SdkHttpError &&
-      (error.status === 401 || error.status === 403)) ||
-    challenge !== undefined
-  ) {
+  if (isCredentialsRefusal(error) || challenge !== undefined) {
     return { kind: 'auth' };
   }
   if (deadline.aborted) {

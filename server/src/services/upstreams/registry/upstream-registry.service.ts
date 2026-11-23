@@ -13,12 +13,15 @@ import {
 import type { ConfigType } from '@nestjs/config';
 import { upstreamsConfig } from '../../../config/upstreams.config.js';
 import { EventBus } from '../../../events/event-bus.js';
-import { AuthType } from '../../../generated/prisma/enums.js';
 import {
   findNetworkRuleError,
   GuardedFetch,
 } from '../../../net/guarded-fetch.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
+import { isCredentialsRefusal } from '../auth/credentials-refusal.js';
+import type { UpstreamAuthTarget } from '../auth/upstream-auth.interface.js';
+import type { UpstreamAuthProvider } from '../auth/upstream-auth-provider.js';
+import { UpstreamAuthProviders } from '../auth/upstream-auth-providers.js';
 import { SetupState } from '../connections/connection.interface.js';
 import {
   CONNECTION_INCLUDE,
@@ -37,15 +40,17 @@ export const LIST_TOOLS_TIMEOUT_MS = 30_000;
 const CLIENT_INFO = { name: 'onedoor', version: '0.0.1' };
 
 // One upstream client and what it was opened for. A sync that wants another
-// URL closes it and opens a new one.
+// URL or other credentials closes it and opens a new one.
 interface Entry {
-  url: string;
+  // The URL and the provider's fingerprint of the credentials.
+  key: string;
   ownerId: string;
   client: Client;
   // Aborts every request of the client, including a connect in progress.
   stop: AbortController;
-  // A failed entry stays until the next sync, so its status shows.
-  state: 'connecting' | 'connected' | 'failed';
+  // A failed or refused entry stays until the next sync, so its status
+  // shows.
+  state: 'connecting' | 'connected' | 'failed' | 'refused';
   // Settles when the connect attempt has ended, either way.
   attempt: Promise<void>;
 }
@@ -56,10 +61,15 @@ interface Decision {
   attempt?: Promise<void>;
 }
 
-// What a connection's row asks for. A null URL means no client.
+// What a connection's row asks for. No client means none is wanted.
 interface Target {
   ownerId: string;
-  url: string | null;
+  client: {
+    key: string;
+    url: string;
+    provider: UpstreamAuthProvider;
+    auth: UpstreamAuthTarget;
+  } | null;
 }
 
 // Owns one MCP client per enabled and READY connection, for every owner.
@@ -81,6 +91,7 @@ export class UpstreamRegistryService
     private readonly guardedFetch: GuardedFetch,
     private readonly eventBus: EventBus,
     private readonly toolSync: ToolSyncService,
+    private readonly authProviders: UpstreamAuthProviders,
     @Inject(upstreamsConfig.KEY)
     private readonly upstreams: ConfigType<typeof upstreamsConfig>,
   ) {}
@@ -116,6 +127,8 @@ export class UpstreamRegistryService
         return ConnectionStatus.CONNECTED;
       case 'failed':
         return ConnectionStatus.FAILED;
+      case 'refused':
+        return ConnectionStatus.REFUSED_CREDENTIALS;
     }
   }
 
@@ -153,8 +166,8 @@ export class UpstreamRegistryService
   }
 
   // Brings the connection's client in line with its row: opens one when the
-  // connection should have one, reopens it when the URL changed, and closes
-  // it otherwise. Resolves when the connect attempt, if any, has ended.
+  // connection should have one, reopens it when the URL or the credentials
+  // changed, and closes it otherwise. Resolves when the connect attempt, if any, has ended.
   async sync(connectionId: string): Promise<void> {
     const previous = this.queues.get(connectionId) ?? Promise.resolve();
     const decision = previous.then(() => this.decide(connectionId));
@@ -184,8 +197,9 @@ export class UpstreamRegistryService
     if (this.closing) return {};
     const target = await this.target(connectionId);
     const current = this.entries.get(connectionId);
-    // A failed client is retried by the next sync.
-    if (current && current.state !== 'failed' && current.url === target?.url) {
+    // A failed or refused client is retried by the next sync.
+    const settled = current?.state === 'failed' || current?.state === 'refused';
+    if (current && !settled && current.key === target?.client?.key) {
       return { attempt: current.attempt };
     }
     if (current) {
@@ -194,16 +208,16 @@ export class UpstreamRegistryService
       this.logger.log(`Closed upstream client for connection ${connectionId}`);
     }
     if (target === null || this.closing) return {};
-    if (target.url === null) {
+    if (target.client === null) {
       if (current) this.changed(connectionId, target.ownerId);
       return {};
     }
-    return { attempt: this.open(connectionId, target.ownerId, target.url) };
+    return { attempt: this.open(connectionId, target.ownerId, target.client) };
   }
 
-  // What the connection's row asks for, or null when the row is gone.
-  // Connections that need credentials wait for UpstreamAuthProvider; until
-  // then only NONE connections get a client.
+  // What the connection's row asks for, or null when the row is gone. An
+  // enabled, READY connection gets a client when a provider exists for its
+  // auth type (T20: NONE and API_KEY).
   private async target(connectionId: string): Promise<Target | null> {
     const row = await this.prisma.connection.findUnique({
       where: { id: connectionId },
@@ -211,17 +225,39 @@ export class UpstreamRegistryService
     });
     if (!row) return null;
     const connection = toConnection(row);
-    const wanted =
-      connection.enabled &&
-      connection.setupState === SetupState.READY &&
-      connection.authType === AuthType.NONE;
-    return { ownerId: row.ownerId, url: wanted ? connection.url : null };
+    const provider = this.authProviders.for(connection.authType);
+    if (
+      !connection.enabled ||
+      connection.setupState !== SetupState.READY ||
+      !provider
+    ) {
+      return { ownerId: row.ownerId, client: null };
+    }
+    const auth: UpstreamAuthTarget = {
+      connectionId,
+      authType: connection.authType,
+      headerName: connection.headerName,
+      headerPrefix: connection.headerPrefix,
+      apiKey:
+        row.apiKeyCiphertext && row.apiKeyKeyId
+          ? { ciphertext: row.apiKeyCiphertext, keyId: row.apiKeyKeyId }
+          : null,
+    };
+    return {
+      ownerId: row.ownerId,
+      client: {
+        key: JSON.stringify([connection.url, provider.fingerprint(auth)]),
+        url: connection.url,
+        provider,
+        auth,
+      },
+    };
   }
 
   private open(
     connectionId: string,
     ownerId: string,
-    url: string,
+    target: NonNullable<Target['client']>,
   ): Promise<void> {
     const stop = new AbortController();
     // A server that announces a changed tool list gets its tools synced.
@@ -235,11 +271,8 @@ export class UpstreamRegistryService
         },
       },
     });
-    const transport = new StreamableHTTPClientTransport(new URL(url), {
-      fetch: stoppable(this.guardedFetch.create(), stop.signal),
-    });
     const entry: Entry = {
-      url,
+      key: target.key,
       ownerId,
       client,
       stop,
@@ -248,16 +281,25 @@ export class UpstreamRegistryService
     };
     this.entries.set(connectionId, entry);
     this.changed(connectionId, ownerId);
-    entry.attempt = this.connect(connectionId, entry, transport);
+    entry.attempt = this.connect(connectionId, entry, target);
     return entry.attempt;
   }
 
   private async connect(
     connectionId: string,
     entry: Entry,
-    transport: StreamableHTTPClientTransport,
+    target: NonNullable<Target['client']>,
   ): Promise<void> {
     try {
+      // The decrypted credentials live only in this transport's options.
+      const auth = await target.provider.authenticate(target.auth);
+      const transport = new StreamableHTTPClientTransport(new URL(target.url), {
+        fetch: stoppable(
+          this.guardedFetch.create({ sensitiveHeaders: auth.sensitiveHeaders }),
+          entry.stop.signal,
+        ),
+        requestInit: { headers: auth.headers },
+      });
       await entry.client.connect(transport, {
         signal: entry.stop.signal,
         timeout: CONNECT_TIMEOUT_MS,
@@ -267,7 +309,7 @@ export class UpstreamRegistryService
       // wanted, so its failure is not news.
       if (this.entries.get(connectionId) !== entry) return;
       await closeEntry(entry);
-      entry.state = 'failed';
+      entry.state = isCredentialsRefusal(error) ? 'refused' : 'failed';
       this.changed(connectionId, entry.ownerId);
       this.logger.warn(
         `Could not connect to the upstream server of connection ${connectionId}: ${failureReason(error)}`,
@@ -315,5 +357,6 @@ async function closeEntry(entry: Entry): Promise<void> {
 function failureReason(error: unknown): string {
   const rule = findNetworkRuleError(error);
   if (rule) return `the network rules stopped the request: ${rule.message}`;
+  if (isCredentialsRefusal(error)) return 'the server refused the credentials';
   return error instanceof Error ? error.name : 'unknown error';
 }
