@@ -11,6 +11,15 @@ export interface CatalogAuthOption {
   // (T22). Null until it is set.
   oauthClientId: string | null;
   hasClientSecret: boolean;
+  // The placeholder names in the URL, such as organization. A connection on
+  // the option gives a value for each (T22).
+  urlParameters: string[];
+}
+
+// A value for one placeholder of an auth option's URL (T22).
+export interface UrlParameter {
+  name: string;
+  value: string;
 }
 
 // A pre-installed server, with the caller's connection if any (REQ-CONN-011).

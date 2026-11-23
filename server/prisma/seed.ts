@@ -58,6 +58,22 @@ export const CATALOG: CatalogSeed[] = [
       },
     ],
   },
+  {
+    key: 'azure-devops',
+    displayName: 'Azure DevOps',
+    description:
+      "Microsoft's remote MCP server for Azure DevOps: work items, repositories, pipelines and more.",
+    authOptions: [
+      {
+        // Microsoft Entra sign-in only: no personal access tokens and no
+        // dynamic client registration. The owner registers an Entra app,
+        // usually a public client without a secret, and sets it on this
+        // option. Each connection gives its organization (T22).
+        authType: 'OAUTH_MANUAL',
+        url: 'https://mcp.dev.azure.com/{organization}',
+      },
+    ],
+  },
 ];
 
 // Creates and updates the rows every environment needs. Safe to run more

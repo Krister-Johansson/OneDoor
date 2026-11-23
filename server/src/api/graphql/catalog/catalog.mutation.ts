@@ -5,6 +5,7 @@ import { AuthType } from '../../../generated/prisma/enums.js';
 import { CatalogService } from '../../../services/upstreams/catalog/catalog.service.js';
 import { ConnectionModel } from '../connections/models/connection.model.js';
 import { SetCatalogOAuthClientInput } from './inputs/set-catalog-oauth-client.input.js';
+import { UrlParameterInput } from './inputs/url-parameter.input.js';
 import { CatalogEntryModel } from './models/catalog-entry.model.js';
 
 @Resolver(() => CatalogEntryModel)
@@ -19,11 +20,19 @@ export class CatalogMutation {
     @CurrentCaller() caller: Caller,
     @Args('catalogEntryId', { type: () => ID }) catalogEntryId: string,
     @Args('authType', { type: () => AuthType }) authType: AuthType,
+    @Args('urlParameters', {
+      type: () => [UrlParameterInput],
+      nullable: true,
+      description:
+        "Values for the placeholders in the option's URL (T22). Left out keeps the stored values.",
+    })
+    urlParameters?: UrlParameterInput[] | null,
   ): Promise<ConnectionModel> {
     return this.catalogService.switchOn(
       caller.userId,
       catalogEntryId,
       authType,
+      urlParameters ?? undefined,
     );
   }
 
