@@ -183,8 +183,31 @@ describe('database schema', () => {
       entries.map((e) => [e.key, e.authOptions.map((o) => o.authType)]),
     ).toEqual([
       ['context7', ['API_KEY', 'OAUTH_DCR']],
-      ['github', ['API_KEY']],
+      ['github', ['API_KEY', 'OAUTH_MANUAL']],
     ]);
+  });
+
+  it("keeps an option's OAuth app when the seed runs again (T22)", async () => {
+    const github = await prisma.catalogEntry.findUniqueOrThrow({
+      where: { key: 'github' },
+    });
+    const where = {
+      catalogEntryId_authType: {
+        catalogEntryId: github.id,
+        authType: 'OAUTH_MANUAL' as const,
+      },
+    };
+    await prisma.catalogAuthOption.update({
+      where,
+      data: { oauthClientId: 'seed-test-app' },
+    });
+    await seed(prisma);
+    const option = await prisma.catalogAuthOption.findUniqueOrThrow({ where });
+    expect(option.oauthClientId).toBe('seed-test-app');
+    await prisma.catalogAuthOption.update({
+      where,
+      data: { oauthClientId: null },
+    });
   });
 
   it('rejects a catalog-based connection without an auth option', async () => {
@@ -224,5 +247,28 @@ describe('database schema', () => {
         },
       }),
     ).rejects.toThrow(/catalog_auth_option_api_key_header_check/);
+  });
+
+  it('keeps an OAuth app off options other than OAUTH_MANUAL (T22)', async () => {
+    await expect(
+      prisma.catalogAuthOption.update({
+        where: { id: optionId },
+        data: { oauthClientId: 'not-here' },
+      }),
+    ).rejects.toThrow(/catalog_auth_option_oauth_client_auth_check/);
+  });
+
+  it('requires a client id with a client secret on an auth option (T22)', async () => {
+    await expect(
+      prisma.catalogAuthOption.create({
+        data: {
+          catalogEntryId,
+          authType: 'OAUTH_MANUAL',
+          url: 'https://x.test',
+          oauthClientSecretCiphertext: 'c',
+          oauthClientSecretKeyId: 'k',
+        },
+      }),
+    ).rejects.toThrow(/catalog_auth_option_oauth_client_auth_check/);
   });
 });

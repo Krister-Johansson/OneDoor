@@ -129,6 +129,12 @@ describe('catalog (e2e)', () => {
             headerName: 'Authorization',
             headerPrefix: 'Bearer',
           },
+          {
+            authType: 'OAUTH_MANUAL',
+            url: 'https://api.githubcopilot.com/mcp/',
+            headerName: null,
+            headerPrefix: null,
+          },
         ],
         connection: null,
       },

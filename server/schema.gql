@@ -12,11 +12,21 @@ One way to connect to a catalog entry: an auth type with its URL (REQ-CONN-010).
 type CatalogAuthOption {
   authType: AuthType!
 
+  """
+  Whether the OAuth app's client secret is stored. The secret is never returned.
+  """
+  hasClientSecret: Boolean!
+
   """Only for API_KEY."""
   headerName: String
 
   """Only for API_KEY. May be empty."""
   headerPrefix: String
+
+  """
+  Only for OAUTH_MANUAL: the client id of the OAuth app that every connection on this option uses. Null until it is set; the option cannot be switched on before (T22).
+  """
+  oauthClientId: String
   url: String!
 }
 
@@ -75,7 +85,7 @@ type Connection {
   hasApiKey: Boolean!
 
   """
-  Whether an OAuth client secret is stored. The secret is never returned.
+  Whether an OAuth client secret is stored, the connection's own or its catalog auth option's. The secret is never returned.
   """
   hasClientSecret: Boolean!
 
@@ -96,7 +106,9 @@ type Connection {
   """
   oauthAuthorized: Boolean!
 
-  """The OAuth client id of a custom OAUTH_MANUAL connection."""
+  """
+  The OAuth client id of an OAUTH_MANUAL connection: its own, or its catalog auth option's.
+  """
   oauthClientId: String
   setupState: SetupState!
 
@@ -203,6 +215,11 @@ type Mutation {
   """
   resyncTools(id: ID!): Connection!
 
+  """
+  Sets the OAuth app of a catalog entry's OAUTH_MANUAL option and returns the entry (T22). Every connection on the option uses the app. Register the URL from oauthRedirectUrl in the app.
+  """
+  setCatalogOAuthClient(catalogEntryId: ID!, input: SetCatalogOAuthClientInput!): CatalogEntry!
+
   """Enables or disables a connection (REQ-CONN-051)."""
   setConnectionEnabled(enabled: Boolean!, id: ID!): Connection!
 
@@ -278,6 +295,18 @@ type Query {
 
   """The user the request acts for, for the web sidebar."""
   viewer: Viewer!
+}
+
+"""
+The OAuth app of a catalog entry's OAUTH_MANUAL option. Every connection on the option uses it (T22).
+"""
+input SetCatalogOAuthClientInput {
+  clientId: String!
+
+  """
+  Left out keeps the stored secret, null deletes it, a string replaces it. A public client has none.
+  """
+  clientSecret: String
 }
 
 """Whether the credentials of a connection are complete (REQ-CONN-044)."""

@@ -68,13 +68,14 @@ export class ConnectionModel implements Connection {
 
   @Field(() => String, {
     nullable: true,
-    description: 'The OAuth client id of a custom OAUTH_MANUAL connection.',
+    description:
+      "The OAuth client id of an OAUTH_MANUAL connection: its own, or its catalog auth option's.",
   })
   oauthClientId: string | null;
 
   @Field({
     description:
-      'Whether an OAuth client secret is stored. The secret is never returned.',
+      "Whether an OAuth client secret is stored, the connection's own or its catalog auth option's. The secret is never returned.",
   })
   hasClientSecret: boolean;
 
