@@ -2,7 +2,9 @@
 query ConnectionTools($id: ID!) {
   connection(id: $id) {
     id
+    catalogEntryId
     displayName
+    description
     url
     iconUrl
     authType
