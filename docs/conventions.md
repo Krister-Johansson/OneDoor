@@ -932,6 +932,15 @@ web/src/
 - Each route sets its title in `head`: `"<Screen> · OneDoor"`.
 - Layout works at 375 px with no horizontal scroll: `p-4 sm:p-8` on the page, and rows that wrap.
 
+### Lists and detail pages
+
+Approved 2026-11-23. A screen that lists objects shows them as cards in a grid (`<ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">`), and every action on an object lives on its detail page.
+
+- A card (`ServerCard`) shows the icon, the name, one detail line (the tool count) and one short state at the right (`ConnectionSummary`). A card for an object with a page is a link to it. A card that has no page yet holds the one action that creates it ("Add"), then navigates to the new page.
+- The detail page has a back link with `aria-label="Back to <screen>"`, a header with the name, description and the action the object needs first, a settings panel (`ConnectionPanel`) as a bordered list of rows, and the object's children.
+- Children are an `Accordion` with `multiple`, inside a bordered card. A row's trigger holds the name; a control that belongs to the row, such as a switch, sits next to the trigger, never inside it. A search box above filters the rows on the client when the list can be long.
+- Several components of one page may read the same query. A hook that refreshes it on an event calls `client.refetchQueries`, never the suspense hook's `refetch()`, which suspends the page again.
+
 ### Routes with a path param
 
 Approved 2026-11-23. A detail page under a screen's path is a sibling file with a trailing `_` on the parent segment, so it renders on its own and not inside the parent screen's component. `servers_.$connectionId.tsx` serves `/servers/$connectionId`, and the sidebar's fuzzy match keeps Servers active.
