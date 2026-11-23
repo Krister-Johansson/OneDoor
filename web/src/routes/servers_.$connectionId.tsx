@@ -2,17 +2,22 @@ import {
   createFileRoute,
   type ErrorComponentProps,
   Link,
+  useNavigate,
 } from "@tanstack/react-router"
+import { OAuthResultMessage } from "#/components/servers/oauth-result-message"
 import { ServerHeader } from "#/components/tools/server-header"
 import { ToolsSection } from "#/components/tools/tools-section"
 import { buttonVariants } from "#/components/ui/button"
 import { ConnectionToolsDocument } from "#/gql/graphql"
 import { useConnectionStatusChanges } from "#/hooks/use-connection-status-changes"
 import { errorCode } from "#/lib/graphql-error"
+import { oauthSearch } from "#/lib/oauth-outcome"
 
 // The tools screen of one connection (T19). `servers_` keeps it out of the
 // servers screen's component, so it renders on its own.
 export const Route = createFileRoute("/servers_/$connectionId")({
+  // `?oauth=` from the OAuth callback (T21).
+  validateSearch: oauthSearch,
   loader: ({ context: { preloadQuery }, params: { connectionId } }) => {
     preloadQuery(ConnectionToolsDocument, { variables: { id: connectionId } })
   },
@@ -23,9 +28,19 @@ export const Route = createFileRoute("/servers_/$connectionId")({
 
 function ServerPage() {
   const { connectionId } = Route.useParams()
+  const { oauth } = Route.useSearch()
+  const navigate = useNavigate({ from: Route.fullPath })
   useConnectionStatusChanges()
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 p-4 sm:p-8">
+      {oauth && (
+        <OAuthResultMessage
+          outcome={oauth}
+          onDismiss={() =>
+            void navigate({ search: {}, params: true, replace: true })
+          }
+        />
+      )}
       <ServerHeader connectionId={connectionId} />
       <ToolsSection connectionId={connectionId} />
     </div>

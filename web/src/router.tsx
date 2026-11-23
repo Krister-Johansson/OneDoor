@@ -14,9 +14,14 @@ import { routeTree } from "./routeTree.gen"
 
 // Runs on the server and in the browser, so a new Apollo Client per router.
 export function getRouter() {
-  const apolloClient = new ApolloClient({
+  const apolloClient: ApolloClient = new ApolloClient({
     cache: new InMemoryCache(),
-    link: createLink(),
+    // An event published while the socket was closed is not replayed: on
+    // the first page load, or while the API restarted. So every time the
+    // socket opens, the queries on screen fetch again.
+    link: createLink(() => {
+      void apolloClient.refetchQueries({ include: "active" })
+    }),
   })
 
   const router = createTanStackRouter({
@@ -31,15 +36,23 @@ export function getRouter() {
 }
 
 // Queries and mutations go over HTTP. In the browser, subscriptions go over
-// one graphql-ws socket, opened on the first subscription. Server-side
-// rendering runs no subscriptions.
+// one graphql-ws socket, opened on the first subscription; `onConnected`
+// runs each time it opens. Server-side rendering runs no subscriptions.
 const createLink = createIsomorphicFn()
-  .server((): ApolloLink => new HttpLink({ uri: graphqlEndpoint() }))
+  .server(
+    (_onConnected: () => void): ApolloLink =>
+      new HttpLink({ uri: graphqlEndpoint() }),
+  )
   .client(
-    (): ApolloLink =>
+    (onConnected: () => void): ApolloLink =>
       ApolloLink.split(
         ({ operationType }) => operationType === OperationTypeNode.SUBSCRIPTION,
-        new GraphQLWsLink(createClient({ url: graphqlSocketUrl() })),
+        new GraphQLWsLink(
+          createClient({
+            url: graphqlSocketUrl(),
+            on: { connected: onConnected },
+          }),
+        ),
         new HttpLink({ uri: graphqlEndpoint() }),
       ),
   )

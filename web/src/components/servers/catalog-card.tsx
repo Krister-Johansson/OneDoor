@@ -15,6 +15,7 @@ import { useSetConnectionEnabled } from "#/hooks/use-set-connection-enabled"
 import { useSwitchOnCatalogEntry } from "#/hooks/use-switch-on-catalog-entry"
 import { errorCode } from "#/lib/graphql-error"
 import { AuthOptionDialog } from "./auth-option-dialog"
+import { AuthorizeButton } from "./authorize-button"
 import { ConnectionStatusBadge } from "./connection-status-badge"
 import { ResyncToolsButton } from "./resync-tools-button"
 import { ToolCountBadge } from "./tool-count-badge"
@@ -84,6 +85,11 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
         {connection && (
           <div className="flex flex-wrap items-center gap-2">
             <ConnectionStatusBadge status={connection.status} />
+            <AuthorizeButton
+              connection={connection}
+              serverName={entry.displayName}
+              onError={setError}
+            />
             <ToolCountBadge connection={connection} />
             <ResyncToolsButton
               connection={connection}

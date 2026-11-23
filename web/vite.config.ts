@@ -20,6 +20,9 @@ const config = defineConfig({
       routeRules: {
         "/graphql": { proxy: `${apiUrl}/graphql` },
         "/icons/**": { proxy: `${apiUrl}/icons/**` },
+        // The OAuth redirect URI (T21): the authorization server sends the
+        // browser here, and the API sends it on to the server's page.
+        "/oauth/**": { proxy: `${apiUrl}/oauth/**` },
       },
     }),
     tailwindcss(),

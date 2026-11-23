@@ -102,6 +102,7 @@ export type CatalogQuery = {
       __typename: "Connection"
       id: string
       authType: AuthType
+      oauthAuthorized: boolean
       setupState: SetupState
       enabled: boolean
       status: ConnectionStatus
@@ -120,6 +121,7 @@ export type SwitchOnCatalogEntryMutation = {
     __typename: "Connection"
     id: string
     authType: AuthType
+    oauthAuthorized: boolean
     setupState: SetupState
     enabled: boolean
     status: ConnectionStatus
@@ -143,6 +145,7 @@ export type ConnectionsQuery = {
     hasApiKey: boolean
     oauthClientId: string | null
     hasClientSecret: boolean
+    oauthAuthorized: boolean
     setupState: SetupState
     iconUrl: string
     enabled: boolean
@@ -193,6 +196,7 @@ export type UpdateConnectionMutation = {
     hasApiKey: boolean
     oauthClientId: string | null
     hasClientSecret: boolean
+    oauthAuthorized: boolean
     setupState: SetupState
     iconUrl: string
     enabled: boolean
@@ -207,6 +211,14 @@ export type ResyncToolsMutationVariables = Exact<{
 
 export type ResyncToolsMutation = {
   resyncTools: { __typename: "Connection"; id: string; toolCount: number }
+}
+
+export type StartOAuthAuthorizationMutationVariables = Exact<{
+  id: string | number
+}>
+
+export type StartOAuthAuthorizationMutation = {
+  startOAuthAuthorization: string
 }
 
 export type RemoveConnectionMutationVariables = Exact<{
@@ -281,6 +293,9 @@ export type ConnectionToolsQuery = {
     displayName: string
     url: string
     iconUrl: string
+    authType: AuthType
+    oauthAuthorized: boolean
+    setupState: SetupState
     enabled: boolean
     status: ConnectionStatus
     toolCount: number
@@ -355,6 +370,10 @@ export const CatalogDocument = {
                       {
                         kind: "Field",
                         name: { kind: "Name", value: "authType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "oauthAuthorized" },
                       },
                       {
                         kind: "Field",
@@ -446,6 +465,10 @@ export const SwitchOnCatalogEntryDocument = {
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "id" } },
                 { kind: "Field", name: { kind: "Name", value: "authType" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "oauthAuthorized" },
+                },
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
                 { kind: "Field", name: { kind: "Name", value: "status" } },
@@ -499,6 +522,10 @@ export const ConnectionsDocument = {
                 {
                   kind: "Field",
                   name: { kind: "Name", value: "hasClientSecret" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "oauthAuthorized" },
                 },
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
@@ -721,6 +748,10 @@ export const UpdateConnectionDocument = {
                   kind: "Field",
                   name: { kind: "Name", value: "hasClientSecret" },
                 },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "oauthAuthorized" },
+                },
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
@@ -783,6 +814,48 @@ export const ResyncToolsDocument = {
     },
   ],
 } as unknown as DocumentNode<ResyncToolsMutation, ResyncToolsMutationVariables>
+export const StartOAuthAuthorizationDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "StartOAuthAuthorization" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: { kind: "Variable", name: { kind: "Name", value: "id" } },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "ID" } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "startOAuthAuthorization" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "id" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "id" },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  StartOAuthAuthorizationMutation,
+  StartOAuthAuthorizationMutationVariables
+>
 export const RemoveConnectionDocument = {
   kind: "Document",
   definitions: [
@@ -1040,6 +1113,12 @@ export const ConnectionToolsDocument = {
                 { kind: "Field", name: { kind: "Name", value: "displayName" } },
                 { kind: "Field", name: { kind: "Name", value: "url" } },
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
+                { kind: "Field", name: { kind: "Name", value: "authType" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "oauthAuthorized" },
+                },
+                { kind: "Field", name: { kind: "Name", value: "setupState" } },
                 { kind: "Field", name: { kind: "Name", value: "enabled" } },
                 { kind: "Field", name: { kind: "Name", value: "status" } },
                 { kind: "Field", name: { kind: "Name", value: "toolCount" } },

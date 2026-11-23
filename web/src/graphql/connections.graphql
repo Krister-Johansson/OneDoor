@@ -12,6 +12,7 @@ query Connections {
     hasApiKey
     oauthClientId
     hasClientSecret
+    oauthAuthorized
     setupState
     iconUrl
     enabled
@@ -52,6 +53,7 @@ mutation UpdateConnection($id: ID!, $input: UpdateConnectionInput!) {
     hasApiKey
     oauthClientId
     hasClientSecret
+    oauthAuthorized
     setupState
     iconUrl
     enabled
@@ -67,6 +69,12 @@ mutation ResyncTools($id: ID!) {
     id
     toolCount
   }
+}
+
+# Starts the OAuth authorization of an OAUTH_DCR connection (T21) and
+# returns the URL to send the browser to.
+mutation StartOAuthAuthorization($id: ID!) {
+  startOAuthAuthorization(id: $id)
 }
 
 # Removes a connection with its credentials (REQ-CONN-052).

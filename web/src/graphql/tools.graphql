@@ -5,6 +5,9 @@ query ConnectionTools($id: ID!) {
     displayName
     url
     iconUrl
+    authType
+    oauthAuthorized
+    setupState
     enabled
     status
     toolCount
