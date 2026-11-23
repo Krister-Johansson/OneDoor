@@ -1,6 +1,7 @@
 import { Args, ID, Mutation, Resolver } from '@nestjs/graphql';
 import type { Caller } from '../../../auth/caller.js';
 import { CurrentCaller } from '../../../auth/current-caller.decorator.js';
+import { OAuthService } from '../../../services/upstreams/auth/oauth/oauth.service.js';
 import { ConnectionsService } from '../../../services/upstreams/connections/connections.service.js';
 import { CreateConnectionInput } from './inputs/create-connection.input.js';
 import { UpdateConnectionInput } from './inputs/update-connection.input.js';
@@ -8,7 +9,21 @@ import { ConnectionModel } from './models/connection.model.js';
 
 @Resolver(() => ConnectionModel)
 export class ConnectionsMutation {
-  constructor(private readonly connectionsService: ConnectionsService) {}
+  constructor(
+    private readonly connectionsService: ConnectionsService,
+    private readonly oauthService: OAuthService,
+  ) {}
+
+  @Mutation(() => String, {
+    description:
+      'Starts the OAuth authorization of an OAUTH_DCR connection and returns the URL to send the browser to (T21). OneDoor registers itself with the authorization server first when it has no client there. The flow ends at the OAuth callback within 10 minutes. VALIDATION for another auth type, UPSTREAM_UNAVAILABLE when discovery or registration fails.',
+  })
+  startOAuthAuthorization(
+    @CurrentCaller() caller: Caller,
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<string> {
+    return this.oauthService.start(caller.userId, id);
+  }
 
   @Mutation(() => ConnectionModel, {
     description: 'Adds a custom server (REQ-CONN-020).',

@@ -14,18 +14,22 @@ export const CONNECTION_INCLUDE = {
   catalogEntry: true,
   catalogAuthOption: true,
   _count: { select: { tools: true } },
+  // Only whether tokens exist; the tokens themselves stay in the table.
+  oauth: { select: { tokensCiphertext: true, authorizedAt: true } },
 } as const;
 
 export type ConnectionRow = ConnectionRecord & {
   catalogEntry: CatalogEntryRecord | null;
   catalogAuthOption: CatalogAuthOptionRecord | null;
   _count: { tools: number };
+  oauth: { tokensCiphertext: string | null; authorizedAt: Date | null } | null;
 };
 
-// REQ-CONN-044.
+// REQ-CONN-044. OAUTH_MANUAL waits for T22.
 export function setupStateOf(
   authType: AuthType,
   hasApiKey: boolean,
+  oauthAuthorized: boolean,
 ): SetupState {
   switch (authType) {
     case AuthType.NONE:
@@ -33,6 +37,7 @@ export function setupStateOf(
     case AuthType.API_KEY:
       return hasApiKey ? SetupState.READY : SetupState.NEEDS_CREDENTIALS;
     case AuthType.OAUTH_DCR:
+      return oauthAuthorized ? SetupState.READY : SetupState.NEEDS_CREDENTIALS;
     case AuthType.OAUTH_MANUAL:
       return SetupState.NEEDS_CREDENTIALS;
   }
@@ -54,6 +59,7 @@ export function toConnection(row: ConnectionRow): Connection {
     });
   }
   const hasApiKey = row.apiKeyCiphertext !== null;
+  const oauthAuthorized = (row.oauth?.tokensCiphertext ?? null) !== null;
   return {
     id: row.id,
     catalogEntryId: row.catalogEntryId,
@@ -66,7 +72,8 @@ export function toConnection(row: ConnectionRow): Connection {
     hasApiKey,
     oauthClientId: row.oauthClientId,
     hasClientSecret: row.oauthClientSecretCiphertext !== null,
-    setupState: setupStateOf(authType, hasApiKey),
+    oauthAuthorized,
+    setupState: setupStateOf(authType, hasApiKey, oauthAuthorized),
     iconUrl: iconPath(
       row.catalogEntry ? row.catalogEntry.iconId : row.iconId,
       displayName,

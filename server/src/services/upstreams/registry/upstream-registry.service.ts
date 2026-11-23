@@ -19,7 +19,11 @@ import {
 } from '../../../net/guarded-fetch.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { isCredentialsRefusal } from '../auth/credentials-refusal.js';
-import type { UpstreamAuthTarget } from '../auth/upstream-auth.interface.js';
+import { singleFlightRefresh } from '../auth/oauth/single-flight-refresh.js';
+import type {
+  UpstreamAuth,
+  UpstreamAuthTarget,
+} from '../auth/upstream-auth.interface.js';
 import type { UpstreamAuthProvider } from '../auth/upstream-auth-provider.js';
 import { UpstreamAuthProviders } from '../auth/upstream-auth-providers.js';
 import { SetupState } from '../connections/connection.interface.js';
@@ -217,7 +221,7 @@ export class UpstreamRegistryService
 
   // What the connection's row asks for, or null when the row is gone. An
   // enabled, READY connection gets a client when a provider exists for its
-  // auth type (T20: NONE and API_KEY).
+  // auth type (NONE, API_KEY and OAUTH_DCR).
   private async target(connectionId: string): Promise<Target | null> {
     const row = await this.prisma.connection.findUnique({
       where: { id: connectionId },
@@ -235,6 +239,7 @@ export class UpstreamRegistryService
     }
     const auth: UpstreamAuthTarget = {
       connectionId,
+      ownerId: row.ownerId,
       authType: connection.authType,
       headerName: connection.headerName,
       headerPrefix: connection.headerPrefix,
@@ -242,6 +247,7 @@ export class UpstreamRegistryService
         row.apiKeyCiphertext && row.apiKeyKeyId
           ? { ciphertext: row.apiKeyCiphertext, keyId: row.apiKeyKeyId }
           : null,
+      oauthAuthorizedAt: row.oauth?.authorizedAt ?? null,
     };
     return {
       ownerId: row.ownerId,
@@ -292,13 +298,15 @@ export class UpstreamRegistryService
   ): Promise<void> {
     try {
       // The decrypted credentials live only in this transport's options.
-      const auth = await target.provider.authenticate(target.auth);
+      // A provider that loses the credentials (a refused OAuth refresh) asks
+      // for a sync, which sees the connection needs its owner again.
+      const auth = await target.provider.authenticate(target.auth, {
+        credentialsLost: () => this.syncInBackground(connectionId),
+      });
       const transport = new StreamableHTTPClientTransport(new URL(target.url), {
-        fetch: stoppable(
-          this.guardedFetch.create({ sensitiveHeaders: auth.sensitiveHeaders }),
-          entry.stop.signal,
-        ),
+        fetch: stoppable(this.clientFetch(auth), entry.stop.signal),
         requestInit: { headers: auth.headers },
+        authProvider: auth.authProvider,
       });
       await entry.client.connect(transport, {
         signal: entry.stop.signal,
@@ -324,6 +332,17 @@ export class UpstreamRegistryService
     this.changed(connectionId, entry.ownerId);
     this.toolSync.syncInBackground(connectionId);
     this.logger.log(`Connected upstream client for connection ${connectionId}`);
+  }
+
+  // The fetch of one client. An OAuth client also refreshes its tokens
+  // through it: those bodies carry secrets and stay on their origin, and
+  // concurrent refreshes share one request.
+  private clientFetch(auth: UpstreamAuth): FetchLike {
+    const fetch = this.guardedFetch.create({
+      sensitiveHeaders: auth.sensitiveHeaders,
+      bodyStaysOnOrigin: auth.authProvider !== undefined,
+    });
+    return auth.authProvider ? singleFlightRefresh(fetch) : fetch;
   }
 
   // Publishes in the background: a status change never waits for Redis.

@@ -3,6 +3,7 @@
 //
 // Every twin listens on 127.0.0.1 on a free port and returns its URL and a
 // close function. Tests never reach the real network.
+import { createHash } from 'node:crypto';
 import {
   createServer,
   type IncomingMessage,
@@ -252,4 +253,190 @@ export function startIconTwin(options: IconTwinOptions): Promise<Twin> {
     }
     notFound(res);
   });
+}
+
+export interface OAuthFlowTwin extends Twin {
+  // Makes /authorize answer `error=access_denied` instead of a code.
+  denyNext(): void;
+  // Ends every access token, so the client must refresh.
+  expireAccessTokens(): void;
+  // Ends every access and refresh token, so the client must authorize again.
+  revokeAll(): void;
+  // How many clients registered, and how many refreshes succeeded.
+  readonly registrations: number;
+  readonly refreshes: number;
+}
+
+interface IssuedCode {
+  clientId: string;
+  redirectUri: string;
+  challenge: string;
+}
+
+// An MCP server protected by OAuth with dynamic client registration that
+// runs the whole flow: /register, /authorize (redirects at once with a code,
+// as if the user agreed), /token for authorization_code with PKCE S256 and
+// for refresh_token (rotating), and /mcp, which accepts the access tokens
+// it issued and lists the tools `alpha` and `beta`.
+export async function startOAuthFlowTwin(): Promise<OAuthFlowTwin> {
+  const clients = new Map<string, string[]>();
+  const codes = new Map<string, IssuedCode>();
+  const accessTokens = new Set<string>();
+  const refreshTokens = new Map<string, string>();
+  let deny = false;
+  let registrations = 0;
+  let refreshes = 0;
+  let counter = 0;
+  const next = (kind: string) => `${kind}-${++counter}`;
+
+  const json = (res: ServerResponse, status: number, body: unknown) => {
+    res.writeHead(status, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(body));
+  };
+  const readBody = async (req: IncomingMessage) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    return Buffer.concat(chunks).toString('utf8');
+  };
+  const issueTokens = (res: ServerResponse, clientId: string) => {
+    const accessToken = next('access');
+    const refreshToken = next('refresh');
+    accessTokens.add(accessToken);
+    refreshTokens.set(refreshToken, clientId);
+    json(res, 200, {
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: 3600,
+      refresh_token: refreshToken,
+    });
+  };
+
+  const twin = await listen(async (req, res, origin) => {
+    const url = new URL(req.url ?? '/', origin);
+    if (url.pathname.startsWith('/.well-known/oauth-protected-resource')) {
+      return json(res, 200, {
+        resource: `${origin}/mcp`,
+        authorization_servers: [origin],
+        bearer_methods_supported: ['header'],
+      });
+    }
+    if (url.pathname === '/.well-known/oauth-authorization-server') {
+      return json(res, 200, {
+        issuer: origin,
+        authorization_endpoint: `${origin}/authorize`,
+        token_endpoint: `${origin}/token`,
+        registration_endpoint: `${origin}/register`,
+        response_types_supported: ['code'],
+        grant_types_supported: ['authorization_code', 'refresh_token'],
+        code_challenge_methods_supported: ['S256'],
+        token_endpoint_auth_methods_supported: ['none'],
+      });
+    }
+    if (url.pathname === '/register' && req.method === 'POST') {
+      const metadata = JSON.parse(await readBody(req)) as {
+        redirect_uris?: string[];
+      };
+      const clientId = next('client');
+      clients.set(clientId, metadata.redirect_uris ?? []);
+      registrations += 1;
+      return json(res, 201, {
+        ...metadata,
+        client_id: clientId,
+        token_endpoint_auth_method: 'none',
+      });
+    }
+    if (url.pathname === '/authorize') {
+      const clientId = url.searchParams.get('client_id') ?? '';
+      const redirectUri = url.searchParams.get('redirect_uri') ?? '';
+      const challenge = url.searchParams.get('code_challenge') ?? '';
+      if (
+        !clients.get(clientId)?.includes(redirectUri) ||
+        url.searchParams.get('response_type') !== 'code' ||
+        url.searchParams.get('code_challenge_method') !== 'S256' ||
+        challenge === ''
+      ) {
+        return json(res, 400, { error: 'invalid_request' });
+      }
+      const target = new URL(redirectUri);
+      const state = url.searchParams.get('state');
+      if (state !== null) target.searchParams.set('state', state);
+      target.searchParams.set('iss', origin);
+      if (deny) {
+        deny = false;
+        target.searchParams.set('error', 'access_denied');
+      } else {
+        const code = next('code');
+        codes.set(code, { clientId, redirectUri, challenge });
+        target.searchParams.set('code', code);
+      }
+      res.writeHead(302, { location: target.toString() });
+      res.end();
+      return;
+    }
+    if (url.pathname === '/token' && req.method === 'POST') {
+      const form = new URLSearchParams(await readBody(req));
+      const clientId = form.get('client_id') ?? '';
+      if (form.get('grant_type') === 'authorization_code') {
+        const issued = codes.get(form.get('code') ?? '');
+        codes.delete(form.get('code') ?? '');
+        const verifier = form.get('code_verifier') ?? '';
+        const challenge = createHash('sha256')
+          .update(verifier)
+          .digest('base64url');
+        if (
+          !issued ||
+          issued.clientId !== clientId ||
+          issued.redirectUri !== form.get('redirect_uri') ||
+          issued.challenge !== challenge
+        ) {
+          return json(res, 400, { error: 'invalid_grant' });
+        }
+        return issueTokens(res, clientId);
+      }
+      if (form.get('grant_type') === 'refresh_token') {
+        const refreshToken = form.get('refresh_token') ?? '';
+        if (refreshTokens.get(refreshToken) !== clientId) {
+          return json(res, 400, { error: 'invalid_grant' });
+        }
+        refreshTokens.delete(refreshToken);
+        refreshes += 1;
+        return issueTokens(res, clientId);
+      }
+      return json(res, 400, { error: 'unsupported_grant_type' });
+    }
+    if (url.pathname.startsWith('/mcp')) {
+      const token = req.headers.authorization?.replace(/^Bearer /, '');
+      if (!token || !accessTokens.has(token)) {
+        res.writeHead(401, {
+          'www-authenticate': `Bearer error="invalid_token", resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
+        });
+        res.end();
+        return;
+      }
+      return serveMcp(req, res, {
+        name: 'oauth-flow-twin',
+        title: 'OAuth Flow Twin',
+        toolNames: ['alpha', 'beta'],
+      });
+    }
+    notFound(res);
+  });
+
+  return {
+    ...twin,
+    denyNext: () => {
+      deny = true;
+    },
+    expireAccessTokens: () => accessTokens.clear(),
+    revokeAll: () => {
+      accessTokens.clear();
+      refreshTokens.clear();
+    },
+    get registrations() {
+      return registrations;
+    },
+    get refreshes() {
+      return refreshes;
+    },
+  };
 }

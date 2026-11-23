@@ -15,11 +15,12 @@ datasource db {
 /// A person who owns connections. The proof of concept has one user, `me`,
 /// created by the seed (specs/connections.md, REQ-CONN-001).
 model User {
-  id          String       @id @default(uuid(7)) @db.Uuid
-  name        String       @unique
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  id          String            @id @default(uuid(7)) @db.Uuid
+  name        String            @unique
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   connections Connection[]
   tools       Tool[]
+  oauth       ConnectionOAuth[]
 
   @@map("user")
 }
@@ -116,6 +117,7 @@ model Connection {
   createdAt                   DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   tools                       Tool[]
+  oauth                       ConnectionOAuth?
 
   /// The target of Tool's (connection_id, owner_id) foreign key, so a tool
   /// always has its connection's owner.
@@ -124,6 +126,39 @@ model Connection {
   @@unique([ownerId, catalogEntryId])
   @@index([catalogEntryId])
   @@map("connection")
+}
+
+/// The OAuth state of an OAUTH_DCR connection (T21): the client OneDoor
+/// registered with the authorization server, and the tokens. Deleted with the
+/// connection, and when its URL or auth type changes.
+model ConnectionOAuth {
+  connectionId     String     @id @map("connection_id") @db.Uuid
+  /// Always the connection's owner: the connection relation uses both columns.
+  ownerId          String     @map("owner_id") @db.Uuid
+  owner            User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  connection       Connection @relation(fields: [connectionId, ownerId], references: [id, ownerId], onDelete: Cascade)
+  /// The client registration as the MCP SDK returned it, JSON encrypted by
+  /// SecretStore with the context `connection_oauth:<connection id>:client`.
+  clientCiphertext String?    @map("client_ciphertext")
+  clientKeyId      String?    @map("client_key_id")
+  /// The tokens as the MCP SDK returned them, JSON encrypted with the context
+  /// `connection_oauth:<connection id>:tokens`. Null until authorized, and
+  /// after the authorization server refused a refresh.
+  tokensCiphertext String?    @map("tokens_ciphertext")
+  tokensKeyId      String?    @map("tokens_key_id")
+  /// What discovery found for the authorization, so the callback exchanges
+  /// the code with the same authorization server. Not secret.
+  discoveryState   Json?      @map("discovery_state")
+  /// When the owner last completed an authorization. A refresh does not
+  /// change it; the registry reopens the client when it does.
+  authorizedAt     DateTime?  @map("authorized_at") @db.Timestamptz(3)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  /// A one-to-one relation on both columns needs them unique together.
+  @@unique([connectionId, ownerId])
+  @@index([ownerId])
+  @@map("connection_oauth")
 }
 
 /// The bytes of a server icon, fetched once and served from OneDoor's own

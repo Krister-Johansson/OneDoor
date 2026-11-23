@@ -91,6 +91,11 @@ type Connection {
   iconUrl: String!
   id: ID!
 
+  """
+  Whether OAuth tokens are stored (REQ-CONN-041). The tokens are never returned.
+  """
+  oauthAuthorized: Boolean!
+
   """The OAuth client id of a custom OAUTH_MANUAL connection."""
   oauthClientId: String
   setupState: SetupState!
@@ -203,6 +208,11 @@ type Mutation {
 
   """Enables or disables one of the caller's tools (T19)."""
   setToolEnabled(enabled: Boolean!, id: ID!): Tool!
+
+  """
+  Starts the OAuth authorization of an OAUTH_DCR connection and returns the URL to send the browser to (T21). OneDoor registers itself with the authorization server first when it has no client there. The flow ends at the OAuth callback within 10 minutes. VALIDATION for another auth type, UPSTREAM_UNAVAILABLE when discovery or registration fails.
+  """
+  startOAuthAuthorization(id: ID!): String!
 
   """
   Switches on a catalog entry with one of its auth options and returns the connection (REQ-CONN-012). Switch it off with setConnectionEnabled.

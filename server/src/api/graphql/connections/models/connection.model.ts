@@ -78,6 +78,12 @@ export class ConnectionModel implements Connection {
   })
   hasClientSecret: boolean;
 
+  @Field({
+    description:
+      'Whether OAuth tokens are stored (REQ-CONN-041). The tokens are never returned.',
+  })
+  oauthAuthorized: boolean;
+
   @Field(() => SetupState)
   setupState: SetupState;
 

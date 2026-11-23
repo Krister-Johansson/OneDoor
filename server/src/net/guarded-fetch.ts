@@ -35,6 +35,10 @@ export interface GuardedFetchOptions {
   // Header names to drop when a redirect leaves the origin, besides the
   // standard credential headers. For example an API key's header name.
   sensitiveHeaders?: readonly string[];
+  // Refuse a redirect that would send the request body to another origin
+  // (307 or 308). For bodies that carry secrets, such as OAuth token
+  // requests with a code, a code verifier or a refresh token.
+  bodyStaysOnOrigin?: boolean;
 }
 
 // Resolves every address of a host name.
@@ -65,7 +69,9 @@ export class GuardedFetch implements OnModuleDestroy {
       ...CREDENTIAL_HEADERS,
       ...(options.sensitiveHeaders ?? []).map((name) => name.toLowerCase()),
     ];
-    return (input, init) => this.fetch(new URL(String(input)), init, sensitive);
+    const bodyStaysOnOrigin = options.bodyStaysOnOrigin ?? false;
+    return (input, init) =>
+      this.fetch(new URL(String(input)), init, sensitive, bodyStaysOnOrigin);
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -76,18 +82,27 @@ export class GuardedFetch implements OnModuleDestroy {
     start: URL,
     init: RequestInit = {},
     sensitiveHeaders: readonly string[],
+    bodyStaysOnOrigin: boolean,
   ): Promise<Response> {
-    if (
-      init.body !== undefined &&
-      init.body !== null &&
-      typeof init.body !== 'string'
-    ) {
-      throw new TypeError('GuardedFetch sends only string bodies');
+    const headers = new Headers(init.headers);
+    // A body is kept as a string, so a redirect can send it again. A form
+    // (OAuth token requests) becomes its URL-encoded text.
+    let body: string | undefined;
+    if (init.body instanceof URLSearchParams) {
+      body = init.body.toString();
+      if (!headers.has('content-type')) {
+        headers.set(
+          'content-type',
+          'application/x-www-form-urlencoded;charset=UTF-8',
+        );
+      }
+    } else if (typeof init.body === 'string') {
+      body = init.body;
+    } else if (init.body !== undefined && init.body !== null) {
+      throw new TypeError('GuardedFetch sends only string and form bodies');
     }
     let url = start;
     let method = init.method ?? 'GET';
-    let body: string | undefined = init.body ?? undefined;
-    const headers = new Headers(init.headers);
 
     for (let redirects = 0; ; redirects++) {
       assertUrlAllowed(url);
@@ -112,9 +127,6 @@ export class GuardedFetch implements OnModuleDestroy {
       }
 
       const next = new URL(location, url);
-      if (next.origin !== url.origin) {
-        for (const name of sensitiveHeaders) headers.delete(name);
-      }
       if (
         response.status === 303 ||
         ((response.status === 301 || response.status === 302) &&
@@ -123,6 +135,14 @@ export class GuardedFetch implements OnModuleDestroy {
         method = 'GET';
         body = undefined;
         headers.delete('content-type');
+      }
+      if (next.origin !== url.origin) {
+        for (const name of sensitiveHeaders) headers.delete(name);
+        if (bodyStaysOnOrigin && body !== undefined) {
+          throw new NetworkRuleError(
+            `${url.host} redirected a request body to ${next.host}`,
+          );
+        }
       }
       url = next;
     }
