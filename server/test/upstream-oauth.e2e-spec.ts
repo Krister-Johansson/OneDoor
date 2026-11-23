@@ -169,6 +169,15 @@ describe('upstream OAuth with dynamic client registration (e2e)', () => {
   it('refreshes an expired access token without the owner (T21)', async () => {
     const id = await createOAuthConnection('Refreshing');
     await authorize(id);
+    // The first tool sync runs right after connect; wait for it, so this
+    // test's request is the only one that meets the expired token.
+    await vi.waitFor(
+      async () =>
+        expect(await prisma.tool.count({ where: { connectionId: id } })).toBe(
+          2,
+        ),
+      { timeout: 10_000, interval: 50 },
+    );
     const { authorizedAt } = await prisma.connectionOAuth.findUniqueOrThrow({
       where: { connectionId: id },
     });
@@ -184,6 +193,23 @@ describe('upstream OAuth with dynamic client registration (e2e)', () => {
       where: { connectionId: id },
     });
     expect(after.authorizedAt).toEqual(authorizedAt);
+  });
+
+  it('keeps the authorization when several requests meet an expired token at once (T21)', async () => {
+    const id = await createOAuthConnection('Concurrent');
+    await authorize(id);
+
+    twin.expireAccessTokens();
+    const results = await Promise.all([
+      registry.listTools(id),
+      registry.listTools(id),
+      registry.listTools(id),
+    ]);
+    for (const tools of results) {
+      expect(tools?.map((tool) => tool.name)).toEqual(['alpha', 'beta']);
+    }
+    expect(registry.status(id)).toBe('CONNECTED');
+    expect((await stateOf(id)).oauthAuthorized).toBe(true);
   });
 
   it('deletes the tokens and asks the owner again when the refresh is refused (T21)', async () => {
