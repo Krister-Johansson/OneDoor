@@ -718,6 +718,26 @@ this.registry.syncInBackground(id);
 
 The registry test is `server/test/upstream-registry.e2e-spec.ts`. It sets `UPSTREAM_CONNECTING=true` and uses the open twin. It waits for a background change with `vi.waitFor` on `registry.client(id)`, and calls `await registry.sync(id)` where the test itself made the change.
 
+### Upstream auth
+
+Approved 2026-11-23. Each auth type has one `UpstreamAuthProvider` in `server/src/services/upstreams/auth/`, and `UpstreamAuthProviders.for(authType)` picks it. This is the one replaceable part chosen per connection, not by config:
+
+```ts
+{
+  provide: UpstreamAuthProviders,
+  inject: [SecretStore],
+  useFactory: (secretStore: SecretStore) =>
+    new UpstreamAuthProviders([new NoneAuthProvider(), new ApiKeyAuthProvider(secretStore)]),
+}
+```
+
+- A provider has `authType`, `fingerprint(target)` and `async authenticate(target)`. An auth type without a provider gets no client, so adding a type is one class and one entry in the list.
+- `fingerprint` is built from stored values only (header settings, key id and ciphertext), never from a plaintext secret. The registry reopens a client when the URL or the fingerprint changes.
+- `authenticate` decrypts inside the connect attempt, and the plaintext lives only in that transport's `requestInit.headers`. Every header that carries a secret is listed in `sensitiveHeaders` and passed to `guardedFetch.create()`.
+- A 401, a 403 or an `UnauthorizedError` is a refusal (`isCredentialsRefusal`): the status is `REFUSED_CREDENTIALS`, not `FAILED`. The probe uses the same check.
+- Logs name the kind of failure, never a header value or the upstream's error text.
+- The provider has a unit test built with `new` and a real `AesGcmSecretStore`. The e2e test uses the API key twins and asserts that a key change reopens a connected client.
+
 ## Queues
 
 Approved 2026-11-22.
