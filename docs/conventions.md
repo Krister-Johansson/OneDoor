@@ -886,6 +886,7 @@ export function useConnectionStatusChanges(): void {
 ```
 
 - A component that shows a live value wraps it in `aria-live="polite"`, so screen readers announce the change.
+- `createLink(onConnected)` in `src/router.tsx` passes `on: { connected }` to the graphql-ws client, and the router refetches the active queries each time the socket opens. Events published before the socket opens are not replayed, so this covers a page load and a reconnect. Flows need no API polling for a first sync.
 
 ### Waiting for background work
 
@@ -950,6 +951,15 @@ export const Route = createFileRoute("/servers_/$connectionId")({
 - When the `<h1>` shows loaded data, a header component in `src/components/<screen>/` renders it (`server-header.tsx`).
 - The route's `errorComponent` maps `errorCode(error)` to a message in `role="alert"`, with `NOT_FOUND` as its own case, and links back to the parent screen.
 - A link styled as a button is a `Link` with `className={buttonVariants({ variant, size })}`.
+
+
+### Results in the URL
+
+Approved 2026-11-23. A server redirect that reports a result to web uses one search param with a fixed set of values, such as `?oauth=authorized|denied|failed|expired` from the OAuth callback.
+
+- The route reads it with `validateSearch` and a parser in `src/lib/` (`oauthSearch`) that keeps only the known values, so other values are dropped and links to the route need no search.
+- The page shows it once in a message component with `role="status"` for success and `role="alert"` otherwise. Dismiss navigates with `search: {}` and `replace: true`.
+- A button that leaves for another site (`AuthorizeButton`) gets the URL from a mutation and calls `window.location.assign(url)`. It renders only when its action can work: for Authorize, an enabled `OAUTH_DCR` connection without tokens.
 
 ### App shell
 
