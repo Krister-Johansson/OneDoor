@@ -81,7 +81,18 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
       name={entry.displayName}
       iconUrl={entry.iconUrl}
       fromCatalog
-      detail={entry.description}
+      detail={
+        needsApp ? (
+          <>
+            {entry.description}
+            <span className="mt-1 block">
+              Needs an OAuth app before you can add it.
+            </span>
+          </>
+        ) : (
+          entry.description
+        )
+      }
       aside={
         needsApp ? (
           <Button
@@ -105,11 +116,6 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
         )
       }
     >
-      {needsApp && (
-        <p className="text-muted-foreground text-sm">
-          Needs an OAuth app before you can add it.
-        </p>
-      )}
       {error && (
         <p role="alert" className="text-destructive text-sm">
           {error}
