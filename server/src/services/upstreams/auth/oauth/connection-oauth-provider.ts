@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type {
+  OAuthClientInformation,
   OAuthClientMetadata,
   OAuthClientProvider,
   OAuthDiscoveryState,
@@ -27,15 +28,33 @@ export class ConnectionOAuthProvider implements OAuthClientProvider {
   lastState?: string;
   private verifier?: string;
   private loaded?: Promise<ConnectionOAuthState>;
+  // Set only when OneDoor registers itself (OAUTH_DCR). Without it the SDK
+  // uses the client from clientInformation() and never registers.
+  saveClientInformation?: (
+    client: StoredOAuthClientInformation,
+  ) => Promise<void>;
 
+  // `client` is the OAuth app the owner registered (OAUTH_MANUAL). Without
+  // it, OneDoor registers its own client (OAUTH_DCR).
   constructor(
     private readonly connectionId: string,
     private readonly ownerId: string,
     private readonly store: ConnectionOAuthService,
     private readonly callbackUrl: string,
     private readonly mode: ConnectionOAuthMode,
+    private readonly client?: OAuthClientInformation,
   ) {
     if (mode.kind === 'callback') this.verifier = mode.codeVerifier;
+    if (!client) {
+      this.saveClientInformation = async (registered) => {
+        (await this.stored()).client = registered;
+        await this.store.saveClient(
+          this.connectionId,
+          this.ownerId,
+          registered,
+        );
+      };
+    }
   }
 
   get redirectUrl(): string {
@@ -61,14 +80,7 @@ export class ConnectionOAuthProvider implements OAuthClientProvider {
   }
 
   async clientInformation(): Promise<StoredOAuthClientInformation | undefined> {
-    return (await this.stored()).client;
-  }
-
-  async saveClientInformation(
-    client: StoredOAuthClientInformation,
-  ): Promise<void> {
-    (await this.stored()).client = client;
-    await this.store.saveClient(this.connectionId, this.ownerId, client);
+    return this.client ?? (await this.stored()).client;
   }
 
   async tokens(): Promise<StoredOAuthTokens | undefined> {

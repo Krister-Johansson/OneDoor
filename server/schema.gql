@@ -210,7 +210,7 @@ type Mutation {
   setToolEnabled(enabled: Boolean!, id: ID!): Tool!
 
   """
-  Starts the OAuth authorization of an OAUTH_DCR connection and returns the URL to send the browser to (T21). OneDoor registers itself with the authorization server first when it has no client there. The flow ends at the OAuth callback within 10 minutes. VALIDATION for another auth type, UPSTREAM_UNAVAILABLE when discovery or registration fails.
+  Starts the OAuth authorization of an OAUTH_DCR or OAUTH_MANUAL connection and returns the URL to send the browser to (T21, T22). For OAUTH_DCR, OneDoor registers itself with the authorization server first when it has no client there; OAUTH_MANUAL uses the connection's OAuth app. The flow ends at the OAuth callback within 10 minutes. VALIDATION for another auth type or an OAUTH_MANUAL connection without a client id, UPSTREAM_UNAVAILABLE when discovery or registration fails.
   """
   startOAuthAuthorization(id: ID!): String!
 
@@ -270,6 +270,11 @@ type Query {
 
   """The caller's connections, sorted by display name."""
   connections: [Connection!]!
+
+  """
+  The redirect URI to register in an OAuth app for an OAUTH_MANUAL connection (T22). Not a secret.
+  """
+  oauthRedirectUrl: String!
 
   """The user the request acts for, for the web sidebar."""
   viewer: Viewer!

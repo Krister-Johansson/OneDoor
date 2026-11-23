@@ -221,7 +221,7 @@ export class UpstreamRegistryService
 
   // What the connection's row asks for, or null when the row is gone. An
   // enabled, READY connection gets a client when a provider exists for its
-  // auth type (NONE, API_KEY and OAUTH_DCR).
+  // auth type (NONE, API_KEY, OAUTH_DCR and OAUTH_MANUAL).
   private async target(connectionId: string): Promise<Target | null> {
     const row = await this.prisma.connection.findUnique({
       where: { id: connectionId },
@@ -248,6 +248,14 @@ export class UpstreamRegistryService
           ? { ciphertext: row.apiKeyCiphertext, keyId: row.apiKeyKeyId }
           : null,
       oauthAuthorizedAt: row.oauth?.authorizedAt ?? null,
+      oauthClientId: row.oauthClientId,
+      oauthClientSecret:
+        row.oauthClientSecretCiphertext && row.oauthClientSecretKeyId
+          ? {
+              ciphertext: row.oauthClientSecretCiphertext,
+              keyId: row.oauthClientSecretKeyId,
+            }
+          : null,
     };
     return {
       ownerId: row.ownerId,
