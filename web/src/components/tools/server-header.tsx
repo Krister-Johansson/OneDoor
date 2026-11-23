@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { AuthorizeButton } from "#/components/servers/authorize-button"
 import { ConnectionStatusBadge } from "#/components/servers/connection-status-badge"
 import { ResyncToolsButton } from "#/components/servers/resync-tools-button"
 import { ToolCountBadge } from "#/components/servers/tool-count-badge"
@@ -33,6 +34,11 @@ export function ServerHeader({ connectionId }: { connectionId: string }) {
           {connection.enabled ? "Enabled" : "Disabled"}
         </Badge>
         <ConnectionStatusBadge status={connection.status} />
+        <AuthorizeButton
+          connection={connection}
+          serverName={connection.displayName}
+          onError={setError}
+        />
         <ToolCountBadge connection={connection} />
         <ResyncToolsButton
           connection={connection}

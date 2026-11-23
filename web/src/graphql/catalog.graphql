@@ -12,6 +12,7 @@ query Catalog {
     connection {
       id
       authType
+      oauthAuthorized
       setupState
       enabled
       status
@@ -25,6 +26,7 @@ mutation SwitchOnCatalogEntry($catalogEntryId: ID!, $authType: AuthType!) {
   switchOnCatalogEntry(catalogEntryId: $catalogEntryId, authType: $authType) {
     id
     authType
+    oauthAuthorized
     setupState
     enabled
     status

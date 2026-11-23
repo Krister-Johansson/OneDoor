@@ -166,25 +166,13 @@ test("opens a server's tools and disables one (T19)", async ({
   page,
   request,
 }) => {
-  const data = await graphql(
+  await graphql(
     request,
     "mutation ($input: CreateConnectionInput!) { createConnection(input: $input) { id } }",
     { input: { displayName: "Tools Twin", url: twinUrl(), authType: "NONE" } },
   )
-  const id = data.createConnection?.id
-  // The first sync runs in the background. An event that ends before the
-  // page's socket subscribes is not replayed, so wait for it here.
-  await expect
-    .poll(async () => {
-      const synced = await graphql(
-        request,
-        "query ($id: ID!) { connection(id: $id) { toolCount } }",
-        { id },
-      )
-      return (synced.connection as { toolCount?: number } | undefined)
-        ?.toolCount
-    })
-    .toBe(OPEN_TWIN_TOOLS.length)
+  // The first sync may end before the page's socket opens; the queries
+  // fetch again when it does, so the count still shows.
 
   await page.goto("/servers")
   const row = page.getByRole("listitem").filter({ hasText: "Tools Twin" })
@@ -223,4 +211,56 @@ test("shows a message for a server that does not exist (T19)", async ({
   )
   await page.getByRole("link", { name: "Back to servers" }).click()
   await expect(page).toHaveURL(/\/servers$/)
+})
+
+test("authorizes an OAuth server through the browser and comes back to its page (T21)", async ({
+  page,
+  request,
+}) => {
+  const oauthTwinUrl = process.env.E2E_OAUTH_TWIN_URL
+  if (!oauthTwinUrl) throw new Error("E2E_OAUTH_TWIN_URL is not set")
+  await graphql(
+    request,
+    "mutation ($input: CreateConnectionInput!) { createConnection(input: $input) { id } }",
+    {
+      input: {
+        displayName: "OAuth Twin",
+        url: oauthTwinUrl,
+        authType: "OAUTH_DCR",
+      },
+    },
+  )
+
+  await page.goto("/servers")
+  const row = page.getByRole("listitem").filter({ hasText: "OAuth Twin" })
+  await expect(row).toContainText("Needs credentials")
+  // The browser leaves for the twin's /authorize, which sends it back to
+  // /oauth/callback on the web server, which the API answers.
+  await row.getByRole("button", { name: "Authorize" }).click()
+
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}\?oauth=authorized$/)
+  await expect(page.getByRole("status")).toHaveText(
+    "Authorized. OneDoor is connecting to the server.",
+  )
+  await expect(
+    page.getByRole("heading", { level: 1, name: "OAuth Twin" }),
+  ).toBeVisible()
+  await expect(page.getByText("Connected")).toBeVisible()
+  await expect(page.getByRole("switch", { name: "Use alpha" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Authorize" })).toHaveCount(0)
+
+  await page.getByRole("button", { name: "Dismiss" }).click()
+  await expect(page.getByRole("status")).toHaveCount(0)
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}$/)
+})
+
+test("explains an OAuth return that cannot be finished (T21)", async ({
+  page,
+}) => {
+  // A callback with a state OneDoor never issued, as after a stale tab.
+  await page.goto("/oauth/callback?code=made-up&state=made-up")
+  await expect(page).toHaveURL(/\/servers\?oauth=expired$/)
+  await expect(page.getByRole("alert")).toHaveText(
+    "That authorization link expired or was already used. Start the authorization again.",
+  )
 })

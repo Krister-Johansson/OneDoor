@@ -14,6 +14,7 @@ import type { ConnectionsQuery } from "#/gql/graphql"
 import { useRemoveConnection } from "#/hooks/use-remove-connection"
 import { AUTH_TYPE_LABELS } from "#/lib/auth-type"
 import { errorCode } from "#/lib/graphql-error"
+import { AuthorizeButton } from "./authorize-button"
 import { ConnectionStatusBadge } from "./connection-status-badge"
 import { EditServerDialog } from "./edit-server-dialog"
 import { RemoveServerDialog } from "./remove-server-dialog"
@@ -68,6 +69,11 @@ export function MyServerRow({ connection }: { connection: Connection }) {
           {connection.enabled ? "Enabled" : "Disabled"}
         </Badge>
         <ConnectionStatusBadge status={connection.status} />
+        <AuthorizeButton
+          connection={connection}
+          serverName={connection.displayName}
+          onError={setError}
+        />
         <ToolCountBadge connection={connection} />
         <ResyncToolsButton
           connection={connection}

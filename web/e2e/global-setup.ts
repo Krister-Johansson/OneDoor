@@ -11,6 +11,7 @@ import { join, resolve } from "node:path"
 import { promisify } from "node:util"
 import { PostgreSqlContainer } from "@testcontainers/postgresql"
 import { RedisContainer } from "@testcontainers/redis"
+import { startOAuthTwin } from "./twins/oauth-twin"
 import { startOpenTwin } from "./twins/open-twin"
 
 const execFileAsync = promisify(execFile)
@@ -30,13 +31,15 @@ const API_SOCKET_URL = `ws://127.0.0.1:${API_PORT}/graphql`
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`
 
 export default async function globalSetup() {
-  const [postgres, redis, twin] = await Promise.all([
+  const [postgres, redis, twin, oauthTwin] = await Promise.all([
     new PostgreSqlContainer(POSTGRES_IMAGE).start(),
     new RedisContainer(REDIS_IMAGE).start(),
     startOpenTwin(),
+    startOAuthTwin(),
   ])
-  // The flows read the twin's URL from here.
+  // The flows read the twins' URLs from here.
   process.env.E2E_TWIN_URL = twin.url
+  process.env.E2E_OAUTH_TWIN_URL = oauthTwin.url
 
   const serverEnv = {
     ...process.env,
@@ -49,9 +52,11 @@ export default async function globalSetup() {
     SECRET_STORE_KEY: randomBytes(32).toString("base64"),
     // Icon fetching would reach the catalog servers on the internet.
     ICON_FETCHING: "false",
-    // Upstream clients connect only NONE connections, and no catalog entry
-    // in the seed is NONE, so they reach only the twin.
+    // Upstream clients connect only connections with credentials, and the
+    // seed's catalog entries have none, so they reach only the twins.
     UPSTREAM_CONNECTING: "true",
+    // The OAuth twin sends the browser back through the web server.
+    OAUTH_REDIRECT_URL: `${WEB_URL}/oauth/callback`,
   }
   await run(
     "pnpm",
@@ -94,7 +99,12 @@ export default async function globalSetup() {
   const stop = async () => {
     web.kill()
     api.kill()
-    await Promise.allSettled([twin.close(), redis.stop(), postgres.stop()])
+    await Promise.allSettled([
+      twin.close(),
+      oauthTwin.close(),
+      redis.stop(),
+      postgres.stop(),
+    ])
   }
   try {
     await waitFor(`${API_URL}/health/ready`)
