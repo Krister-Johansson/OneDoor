@@ -648,6 +648,8 @@ It applies REQ-CONN-063: the URL rule from `url-policy.ts`, the address rules fr
 
 A refused request throws `NetworkRuleError`; fetch may wrap it, so find it with `findNetworkRuleError(error)`.
 
+Bodies are strings or `URLSearchParams` (sent as URL-encoded text). When a body carries a secret, such as an OAuth token request, create the fetch with `bodyStaysOnOrigin: true`: a 307 or 308 redirect to another origin is then refused instead of sending the body there.
+
 ### Results the client sees
 
 Code that reports on another host returns fixed messages that it writes itself. An upstream's error text, status text or response body never reaches the client, so it cannot carry a secret or untrusted text back.
@@ -731,12 +733,24 @@ Approved 2026-11-23. Each auth type has one `UpstreamAuthProvider` in `server/sr
 }
 ```
 
-- A provider has `authType`, `fingerprint(target)` and `async authenticate(target)`. An auth type without a provider gets no client, so adding a type is one class and one entry in the list.
+- A provider has `authType`, `fingerprint(target)` and `async authenticate(target, hooks)`. An auth type without a provider gets no client, so adding a type is one class and one entry in the list.
 - `fingerprint` is built from stored values only (header settings, key id and ciphertext), never from a plaintext secret. The registry reopens a client when the URL or the fingerprint changes.
 - `authenticate` decrypts inside the connect attempt, and the plaintext lives only in that transport's `requestInit.headers`. Every header that carries a secret is listed in `sensitiveHeaders` and passed to `guardedFetch.create()`.
 - A 401, a 403 or an `UnauthorizedError` is a refusal (`isCredentialsRefusal`): the status is `REFUSED_CREDENTIALS`, not `FAILED`. The probe uses the same check.
 - Logs name the kind of failure, never a header value or the upstream's error text.
 - The provider has a unit test built with `new` and a real `AesGcmSecretStore`. The e2e test uses the API key twins and asserts that a key change reopens a connected client.
+
+### OAuth
+
+Approved 2026-11-23. OAuth types (`OAUTH_DCR`, T21) drive the MCP SDK through `ConnectionOAuthProvider`, an `OAuthClientProvider` per connection in `server/src/services/upstreams/auth/oauth/`, with one of three modes: `start` keeps the authorization URL, `callback` exchanges the code, `client` serves the registry's client.
+
+- `OAuthService.start` runs `auth()` with `forceReauthorization`, stores the pending flow under the state in `OAuthFlowStore` (Redis, 10 minutes, `GETDEL`, so a state works once) with the code verifier encrypted, and returns the URL only when it is http or https.
+- `GET /oauth/callback` calls `OAuthService.finish`, which always answers with a redirect to web: `/servers/<id>?oauth=authorized|denied|failed|expired`. The authorization server's own error text is never shown or logged.
+- `connection_oauth` holds the client registration and the tokens as encrypted JSON, kept exactly as the SDK returned them, and `authorized_at`. The OAuth fingerprint is `authorized_at`, so a new authorization reopens the client and a refresh does not.
+- The registry's OAuth client fetch uses `bodyStaysOnOrigin` and `singleFlightRefresh`, so concurrent 401s send one refresh per refresh token.
+- When the SDK needs a user in `client` mode, the provider deletes the tokens and calls `hooks.credentialsLost()`; the registry syncs and the connection becomes `NEEDS_CREDENTIALS`.
+- A change of URL, auth type or catalog auth option deletes the `connection_oauth` row in the same transaction.
+- Tests use `startOAuthFlowTwin()` and follow the authorize redirect with `fetch(url, { redirect: 'manual' })`, then deliver the callback with supertest. Assert where the callback redirects, not only the stored state.
 
 ## Queues
 
