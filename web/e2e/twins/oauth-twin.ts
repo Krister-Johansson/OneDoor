@@ -23,8 +23,21 @@ interface IssuedCode {
   challenge: string
 }
 
-export async function startOAuthTwin(): Promise<Twin> {
-  const clients = new Map<string, string[]>()
+// An OAuth app registered in advance (OAuth with client details, T22). With
+// it the twin offers no registration and checks the secret at /token.
+export interface PreRegisteredClient {
+  id: string
+  secret: string
+  redirectUris: string[]
+}
+
+export async function startOAuthTwin(
+  options: { client?: PreRegisteredClient } = {},
+): Promise<Twin> {
+  const app = options.client
+  const clients = new Map<string, string[]>(
+    app ? [[app.id, app.redirectUris]] : [],
+  )
   const codes = new Map<string, IssuedCode>()
   const accessTokens = new Set<string>()
   const refreshTokens = new Map<string, string>()
@@ -68,14 +81,16 @@ export async function startOAuthTwin(): Promise<Twin> {
         issuer: origin,
         authorization_endpoint: `${origin}/authorize`,
         token_endpoint: `${origin}/token`,
-        registration_endpoint: `${origin}/register`,
+        ...(!app && { registration_endpoint: `${origin}/register` }),
         response_types_supported: ["code"],
         grant_types_supported: ["authorization_code", "refresh_token"],
         code_challenge_methods_supported: ["S256"],
-        token_endpoint_auth_methods_supported: ["none"],
+        token_endpoint_auth_methods_supported: app
+          ? ["client_secret_basic", "client_secret_post"]
+          : ["none"],
       })
     }
-    if (url.pathname === "/register" && req.method === "POST") {
+    if (url.pathname === "/register" && req.method === "POST" && !app) {
       const metadata = JSON.parse(await readBody(req)) as {
         redirect_uris?: string[]
       }
@@ -107,7 +122,22 @@ export async function startOAuthTwin(): Promise<Twin> {
     }
     if (url.pathname === "/token" && req.method === "POST") {
       const form = new URLSearchParams(await readBody(req))
-      const clientId = form.get("client_id") ?? ""
+      // client_secret_basic, or the id (and secret) in the form.
+      const basic = req.headers.authorization?.match(/^Basic (.+)$/)?.[1]
+      const [basicId, basicSecret] = basic
+        ? Buffer.from(basic, "base64")
+            .toString("utf8")
+            .split(":")
+            .map((part) => decodeURIComponent(part))
+        : []
+      const clientId = basicId ?? form.get("client_id") ?? ""
+      if (
+        app &&
+        (clientId !== app.id ||
+          (basicSecret ?? form.get("client_secret")) !== app.secret)
+      ) {
+        return json(res, 401, { error: "invalid_client" })
+      }
       if (form.get("grant_type") === "authorization_code") {
         const issued = codes.get(form.get("code") ?? "")
         codes.delete(form.get("code") ?? "")

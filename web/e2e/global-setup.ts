@@ -30,16 +30,24 @@ const API_URL = `http://127.0.0.1:${API_PORT}`
 const API_SOCKET_URL = `ws://127.0.0.1:${API_PORT}/graphql`
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`
 
+// The OAuth app of the twin that has no registration (T22). The flows type
+// these into the Add server dialog.
+export const OAUTH_APP = { id: "e2e-app", secret: "e2e-app-secret" }
+
 export default async function globalSetup() {
-  const [postgres, redis, twin, oauthTwin] = await Promise.all([
+  const [postgres, redis, twin, oauthTwin, oauthAppTwin] = await Promise.all([
     new PostgreSqlContainer(POSTGRES_IMAGE).start(),
     new RedisContainer(REDIS_IMAGE).start(),
     startOpenTwin(),
     startOAuthTwin(),
+    startOAuthTwin({
+      client: { ...OAUTH_APP, redirectUris: [`${WEB_URL}/oauth/callback`] },
+    }),
   ])
   // The flows read the twins' URLs from here.
   process.env.E2E_TWIN_URL = twin.url
   process.env.E2E_OAUTH_TWIN_URL = oauthTwin.url
+  process.env.E2E_OAUTH_APP_TWIN_URL = oauthAppTwin.url
 
   const serverEnv = {
     ...process.env,
@@ -102,6 +110,7 @@ export default async function globalSetup() {
     await Promise.allSettled([
       twin.close(),
       oauthTwin.close(),
+      oauthAppTwin.close(),
       redis.stop(),
       postgres.stop(),
     ])

@@ -2,7 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { CatalogSection } from "#/components/servers/catalog-section"
 import { MyServersSection } from "#/components/servers/my-servers-section"
 import { OAuthResultMessage } from "#/components/servers/oauth-result-message"
-import { CatalogDocument, ConnectionsDocument } from "#/gql/graphql"
+import {
+  CatalogDocument,
+  ConnectionsDocument,
+  OAuthRedirectUrlDocument,
+} from "#/gql/graphql"
 import { useConnectionStatusChanges } from "#/hooks/use-connection-status-changes"
 import { useConnectionToolSyncs } from "#/hooks/use-connection-tool-syncs"
 import { oauthSearch } from "#/lib/oauth-outcome"
@@ -16,6 +20,8 @@ export const Route = createFileRoute("/servers")({
   loader: ({ context: { preloadQuery } }) => {
     preloadQuery(CatalogDocument)
     preloadQuery(ConnectionsDocument)
+    // The OAuth app fields of the server dialogs show it.
+    preloadQuery(OAuthRedirectUrlDocument)
   },
   head: () => ({ meta: [{ title: "Servers · OneDoor" }] }),
   component: ServersPage,

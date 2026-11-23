@@ -42,6 +42,7 @@ import {
   DEFAULT_HEADER_PREFIX,
 } from "#/lib/auth-type"
 import { errorCode } from "#/lib/graphql-error"
+import { RedirectUriNote } from "./redirect-uri-note"
 
 type Connection = ConnectionsQuery["connections"][number]
 
@@ -198,6 +199,7 @@ export function EditServerDialog({
 
   const clientFields = () => (
     <>
+      <RedirectUriNote />
       <form.Field name="oauthClientId">
         {(field) => (
           <Field>

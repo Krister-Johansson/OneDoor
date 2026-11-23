@@ -9,7 +9,11 @@ import { ConnectionPanel } from "#/components/tools/connection-panel"
 import { ServerHeader } from "#/components/tools/server-header"
 import { ToolsSection } from "#/components/tools/tools-section"
 import { buttonVariants } from "#/components/ui/button"
-import { ConnectionsDocument, ConnectionToolsDocument } from "#/gql/graphql"
+import {
+  ConnectionsDocument,
+  ConnectionToolsDocument,
+  OAuthRedirectUrlDocument,
+} from "#/gql/graphql"
 import { useConnectionStatusChanges } from "#/hooks/use-connection-status-changes"
 import { errorCode } from "#/lib/graphql-error"
 import { oauthSearch } from "#/lib/oauth-outcome"
@@ -23,6 +27,8 @@ export const Route = createFileRoute("/servers_/$connectionId")({
     preloadQuery(ConnectionToolsDocument, { variables: { id: connectionId } })
     // The edit form reads the connection's settings from the list.
     preloadQuery(ConnectionsDocument)
+    // The OAuth app fields of the server dialogs show it.
+    preloadQuery(OAuthRedirectUrlDocument)
   },
   head: () => ({ meta: [{ title: "Server · OneDoor" }] }),
   component: ServerPage,
