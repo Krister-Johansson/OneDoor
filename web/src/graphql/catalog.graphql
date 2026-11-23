@@ -8,6 +8,8 @@ query Catalog {
     iconUrl
     authOptions {
       authType
+      url
+      urlParameters
       oauthClientId
       hasClientSecret
     }
@@ -23,10 +25,20 @@ query Catalog {
   }
 }
 
-# Switches on a catalog entry with one of its auth options (REQ-CONN-012).
-mutation SwitchOnCatalogEntry($catalogEntryId: ID!, $authType: AuthType!) {
-  switchOnCatalogEntry(catalogEntryId: $catalogEntryId, authType: $authType) {
+# Switches on a catalog entry with one of its auth options (REQ-CONN-012),
+# with values for the placeholders in the option's URL (T22).
+mutation SwitchOnCatalogEntry(
+  $catalogEntryId: ID!
+  $authType: AuthType!
+  $urlParameters: [UrlParameterInput!]
+) {
+  switchOnCatalogEntry(
+    catalogEntryId: $catalogEntryId
+    authType: $authType
+    urlParameters: $urlParameters
+  ) {
     id
+    url
     authType
     oauthClientId
     hasClientSecret

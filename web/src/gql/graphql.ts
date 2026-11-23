@@ -94,6 +94,14 @@ export type UpdateConnectionInput = {
   url?: string | null | undefined
 }
 
+/** A value for a placeholder in a catalog auth option's URL, such as the organization of Azure DevOps (T22). */
+export type UrlParameterInput = {
+  /** The placeholder name, such as organization. */
+  name: string
+  /** One URL path segment: letters, digits, dots, underscores and hyphens. */
+  value: string
+}
+
 export type CatalogQueryVariables = Exact<{ [key: string]: never }>
 
 export type CatalogQuery = {
@@ -107,6 +115,8 @@ export type CatalogQuery = {
     authOptions: Array<{
       __typename: "CatalogAuthOption"
       authType: AuthType
+      url: string
+      urlParameters: Array<string>
       oauthClientId: string | null
       hasClientSecret: boolean
     }>
@@ -126,12 +136,18 @@ export type CatalogQuery = {
 export type SwitchOnCatalogEntryMutationVariables = Exact<{
   catalogEntryId: string | number
   authType: AuthType
+  urlParameters?:
+    | Array<UrlParameterInput>
+    | UrlParameterInput
+    | null
+    | undefined
 }>
 
 export type SwitchOnCatalogEntryMutation = {
   switchOnCatalogEntry: {
     __typename: "Connection"
     id: string
+    url: string
     authType: AuthType
     oauthClientId: string | null
     hasClientSecret: boolean
@@ -402,6 +418,11 @@ export const CatalogDocument = {
                         kind: "Field",
                         name: { kind: "Name", value: "authType" },
                       },
+                      { kind: "Field", name: { kind: "Name", value: "url" } },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "urlParameters" },
+                      },
                       {
                         kind: "Field",
                         name: { kind: "Name", value: "oauthClientId" },
@@ -488,6 +509,23 @@ export const SwitchOnCatalogEntryDocument = {
             },
           },
         },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "urlParameters" },
+          },
+          type: {
+            kind: "ListType",
+            type: {
+              kind: "NonNullType",
+              type: {
+                kind: "NamedType",
+                name: { kind: "Name", value: "UrlParameterInput" },
+              },
+            },
+          },
+        },
       ],
       selectionSet: {
         kind: "SelectionSet",
@@ -512,11 +550,20 @@ export const SwitchOnCatalogEntryDocument = {
                   name: { kind: "Name", value: "authType" },
                 },
               },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "urlParameters" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "urlParameters" },
+                },
+              },
             ],
             selectionSet: {
               kind: "SelectionSet",
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "url" } },
                 { kind: "Field", name: { kind: "Name", value: "authType" } },
                 {
                   kind: "Field",
