@@ -21,11 +21,11 @@ export class CallerService {
   }
 
   private async loadDefaultCaller(): Promise<Caller> {
-    let user: { id: string } | null;
+    let user: { id: string; name: string } | null;
     try {
       user = await this.prisma.user.findUnique({
         where: { name: DEFAULT_USER_NAME },
-        select: { id: true },
+        select: { id: true, name: true },
       });
     } catch (error) {
       throw toDomainError(error, 'User');
@@ -37,6 +37,6 @@ export class CallerService {
         ),
       });
     }
-    return { userId: user.id };
+    return { userId: user.id, userName: user.name };
   }
 }

@@ -151,17 +151,18 @@ export function EditServerDialog({
       <Collapsible>
         <CollapsibleTrigger
           render={<Button type="button" variant="ghost" size="sm" />}
-          className="group/advanced -ml-2"
+          className="group/advanced -mx-2 w-[calc(100%+1rem)] justify-between"
         >
           Advanced settings
           <ChevronDownIcon className="transition-transform group-data-[panel-open]/advanced:rotate-180" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="flex flex-col gap-4 pt-2">
+        <CollapsibleContent className="grid gap-4 pt-2 sm:grid-cols-2">
           <form.Field name="headerName">
             {(field) => (
               <Field>
                 <FieldLabel htmlFor={field.name}>Header name</FieldLabel>
                 <Input
+                  className="font-mono"
                   id={field.name}
                   name={field.name}
                   autoComplete="off"

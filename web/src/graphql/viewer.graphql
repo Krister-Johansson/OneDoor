@@ -1,0 +1,7 @@
+# The user the web app acts for, for the sidebar footer.
+query Viewer {
+  viewer {
+    id
+    name
+  }
+}

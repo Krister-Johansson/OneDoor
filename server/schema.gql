@@ -270,6 +270,9 @@ type Query {
 
   """The caller's connections, sorted by display name."""
   connections: [Connection!]!
+
+  """The user the request acts for, for the web sidebar."""
+  viewer: Viewer!
 }
 
 """Whether the credentials of a connection are complete (REQ-CONN-044)."""
@@ -337,4 +340,12 @@ input UpdateConnectionInput {
   """
   oauthClientSecret: String
   url: String
+}
+
+"""
+The user the request acts for. Until sign-in exists, always the seeded user `me`.
+"""
+type Viewer {
+  id: ID!
+  name: String!
 }

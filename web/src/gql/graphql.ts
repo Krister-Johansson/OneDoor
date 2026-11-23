@@ -328,6 +328,12 @@ export type SetToolEnabledMutation = {
   setToolEnabled: { __typename: "Tool"; id: string; enabled: boolean }
 }
 
+export type ViewerQueryVariables = Exact<{ [key: string]: never }>
+
+export type ViewerQuery = {
+  viewer: { __typename: "Viewer"; id: string; name: string }
+}
+
 export const CatalogDocument = {
   kind: "Document",
   definitions: [
@@ -1256,3 +1262,29 @@ export const SetToolEnabledDocument = {
   SetToolEnabledMutation,
   SetToolEnabledMutationVariables
 >
+export const ViewerDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "query",
+      name: { kind: "Name", value: "Viewer" },
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "viewer" },
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                { kind: "Field", name: { kind: "Name", value: "name" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<ViewerQuery, ViewerQueryVariables>
