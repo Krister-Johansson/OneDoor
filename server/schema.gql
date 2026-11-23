@@ -28,6 +28,11 @@ type CatalogAuthOption {
   """
   oauthClientId: String
   url: String!
+
+  """
+  The placeholders in the URL, such as organization. Switching on the option takes a value for each (T22).
+  """
+  urlParameters: [String!]!
 }
 
 """A pre-installed server that the caller can switch on."""
@@ -234,7 +239,15 @@ type Mutation {
   """
   Switches on a catalog entry with one of its auth options and returns the connection (REQ-CONN-012). Switch it off with setConnectionEnabled.
   """
-  switchOnCatalogEntry(authType: AuthType!, catalogEntryId: ID!): Connection!
+  switchOnCatalogEntry(
+    authType: AuthType!
+    catalogEntryId: ID!
+
+    """
+    Values for the placeholders in the option's URL (T22). Left out keeps the stored values.
+    """
+    urlParameters: [UrlParameterInput!]
+  ): Connection!
 
   """Changes a custom server (REQ-CONN-023, REQ-CONN-042)."""
   updateConnection(id: ID!, input: UpdateConnectionInput!): Connection!
@@ -374,6 +387,17 @@ input UpdateConnectionInput {
   """
   oauthClientSecret: String
   url: String
+}
+
+"""
+A value for a placeholder in a catalog auth option's URL, such as the organization of Azure DevOps (T22).
+"""
+input UrlParameterInput {
+  """The placeholder name, such as organization."""
+  name: String!
+
+  """One URL path segment: letters, digits, dots, underscores and hyphens."""
+  value: String!
 }
 
 """

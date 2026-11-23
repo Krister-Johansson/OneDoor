@@ -86,6 +86,20 @@ describe('server icons (e2e)', () => {
         },
       },
     });
+    // A URL with a placeholder (T22) is not probed; its origin's favicon is
+    // used.
+    await prisma.catalogEntry.create({
+      data: {
+        key: 'templated',
+        displayName: 'Zeta Templated',
+        authOptions: {
+          create: {
+            authType: 'OAUTH_MANUAL',
+            url: `${new URL(twins.htmlThenFavicon?.url ?? '').origin}/{organization}`,
+          },
+        },
+      },
+    });
 
     stubAppEnv({ DATABASE_URL: postgres.getConnectionUri() });
     vi.stubEnv('ICON_FETCHING', 'true');
@@ -190,6 +204,22 @@ describe('server icons (e2e)', () => {
       { id: entry?.id },
     );
     expect(switched.data?.switchOnCatalogEntry?.iconUrl).toBe(entry?.iconUrl);
+  });
+
+  it("gives a catalog entry with a URL template its origin's favicon (T22)", async () => {
+    let iconId: string | null = null;
+    for (let attempt = 0; attempt < 50 && !iconId; attempt++) {
+      const entry = await prisma.catalogEntry.findUniqueOrThrow({
+        where: { key: 'templated' },
+        include: { icon: true },
+      });
+      iconId =
+        entry.icon?.contentType === 'image/vnd.microsoft.icon'
+          ? entry.iconId
+          : null;
+      if (!iconId) await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(iconId).not.toBeNull();
   });
 
   it('stores identical icons once', async () => {

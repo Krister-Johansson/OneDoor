@@ -55,7 +55,8 @@ model CatalogEntry {
 }
 
 /// One way to connect to a catalog entry: an auth type with its URL and, for
-/// API_KEY, the header settings (REQ-CONN-010). An OAUTH_MANUAL option holds
+/// API_KEY, the header settings (REQ-CONN-010). The URL may hold
+/// placeholders such as `{organization}`, which each connection fills in. An OAUTH_MANUAL option holds
 /// the OAuth app that every connection on it uses (T22), set through the API.
 model CatalogAuthOption {
   id                          String       @id @default(uuid(7)) @db.Uuid
@@ -98,6 +99,10 @@ model Connection {
   /// The auth option chosen when the entry was switched on (REQ-CONN-012).
   catalogAuthOptionId         String?            @map("catalog_auth_option_id") @db.Uuid
   catalogAuthOption           CatalogAuthOption? @relation(fields: [catalogEntryId, catalogAuthOptionId], references: [catalogEntryId, id], onDelete: Restrict)
+  /// Catalog-based only: the values for the placeholders in the auth
+  /// option's URL, such as `{"organization": "contoso"}` (T22). A JSON
+  /// object of strings, each a URL path segment. Not secret.
+  urlParameters               Json?              @map("url_parameters")
   /// Unique per owner, ignoring case (citext). Null on catalog-based connections.
   displayName                 String?            @map("display_name") @db.Citext
   description                 String?

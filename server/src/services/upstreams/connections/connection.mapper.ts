@@ -7,6 +7,7 @@ import type {
 } from '../../../generated/prisma/client.js';
 import { AuthType } from '../../../generated/prisma/enums.js';
 import { iconPath } from '../../icons/icons.service.js';
+import { fillTemplate, urlParametersSchema } from '../catalog/url-template.js';
 import { type Connection, SetupState } from './connection.interface.js';
 
 // Every query that maps to Connection loads these relations.
@@ -53,7 +54,15 @@ export function setupStateOf(
 export function toConnection(row: ConnectionRow): Connection {
   const displayName = row.catalogEntry?.displayName ?? row.displayName;
   const settings = row.catalogAuthOption ?? row;
-  const { url, authType } = settings;
+  const { authType } = settings;
+  // A catalog option's URL may hold placeholders that the connection fills
+  // in (T22).
+  const url = row.catalogAuthOption
+    ? fillTemplate(
+        row.catalogAuthOption.url,
+        urlParametersSchema.safeParse(row.urlParameters ?? {}).data ?? {},
+      )
+    : row.url;
   if (displayName === null || url === null || authType === null) {
     throw new InternalError({
       cause: new Error(

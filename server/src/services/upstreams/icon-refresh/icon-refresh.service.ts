@@ -8,6 +8,7 @@ import type { ConfigType } from '@nestjs/config';
 import { iconsConfig } from '../../../config/icons.config.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { IconsService } from '../../icons/icons.service.js';
+import { templateOrigin, templateParameters } from '../catalog/url-template.js';
 import { ProbeService } from '../probe/probe.service.js';
 
 // Finds and stores server icons (REQ-CONN-070) in the background, so no
@@ -61,7 +62,14 @@ export class IconRefreshService implements OnApplicationBootstrap {
     for (const entry of entries) {
       const url = entry.authOptions[0]?.url;
       if (!url) continue;
-      const iconId = await this.findIcon(url);
+      // A URL with placeholders (T22) is no server to probe; its origin may
+      // still have a favicon.
+      const iconId =
+        templateParameters(url).length > 0
+          ? await this.iconsService.fetchFirst([
+              new URL('/favicon.ico', templateOrigin(url)).href,
+            ])
+          : await this.findIcon(url);
       if (iconId) {
         await this.prisma.catalogEntry.update({
           where: { id: entry.id },
