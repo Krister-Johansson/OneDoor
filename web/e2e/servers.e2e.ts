@@ -333,3 +333,65 @@ test("adds a server with an OAuth app, shows the redirect URI, and authorizes it
   await expect(connection).toContainText("Connected")
   await expect(page.getByRole("switch", { name: "Use alpha" })).toBeVisible()
 })
+
+test("sets the OAuth app of a catalog server and signs in with it (T22)", async ({
+  page,
+}) => {
+  const clientId = "e2e-github-app"
+  const clientSecret = "e2e-github-secret"
+
+  // An earlier flow may have added GitHub with its API key option.
+  await page.goto("/servers")
+  await expect(card(page, "GitHub")).toBeVisible()
+  const add = page.getByRole("button", { name: "Add GitHub" })
+  if (await add.isVisible()) await add.click()
+  else await card(page, "GitHub").getByRole("link").click()
+  await expect(
+    page.getByRole("heading", { level: 1, name: "GitHub" }),
+  ).toBeVisible()
+
+  const section = page.getByRole("region", { name: "OAuth app" })
+  await expect(section).toContainText("Client idNot set")
+  await section.getByRole("button", { name: "Set up OAuth app" }).click()
+  const dialog = page.getByRole("dialog", { name: "OAuth app for GitHub" })
+  // The owner registers this URI in the OAuth app.
+  await expect(dialog.getByText(/\/oauth\/callback$/)).toBeVisible()
+  await dialog.getByLabel("Client id").fill(clientId)
+  await dialog.getByLabel("Client secret").fill(clientSecret)
+  await dialog.getByRole("button", { name: "Save" }).click()
+  await expect(dialog).toBeHidden()
+  await expect(section).toContainText(`Client id${clientId}`)
+  await expect(section).toContainText("Client secretSet")
+  await expect(page.getByText(clientSecret)).toHaveCount(0)
+
+  // Moving the connection to the app's option asks for an authorization.
+  await section
+    .getByRole("button", { name: "Use OAuth with client details" })
+    .click()
+  const connection = page.getByRole("region", { name: "Connection" })
+  await expect(connection).toContainText(
+    "OAuth with client details · Needs credentials",
+  )
+  await expect(
+    section.getByRole("button", { name: "Use OAuth with client details" }),
+  ).toBeHidden()
+
+  // Once the app is set, adding GitHub offers the option. The authorization
+  // itself would go to github.com, so the flow stops at the button.
+  await connection.getByRole("button", { name: "Remove" }).click()
+  await page
+    .getByRole("alertdialog", { name: "Remove GitHub?" })
+    .getByRole("button", { name: "Remove" })
+    .click()
+  await expect(page).toHaveURL(/\/servers$/)
+  await page.getByRole("button", { name: "Add GitHub" }).click()
+  await page
+    .getByRole("dialog", { name: "Connect to GitHub" })
+    .getByRole("button", { name: /OAuth with client details/ })
+    .click()
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}$/)
+  await expect(page.getByRole("region", { name: "Connection" })).toContainText(
+    "OAuth with client details · Needs credentials",
+  )
+  await expect(page.getByRole("button", { name: "Authorize" })).toBeVisible()
+})
