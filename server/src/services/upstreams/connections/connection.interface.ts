@@ -22,6 +22,9 @@ export interface Connection {
   hasApiKey: boolean;
   oauthClientId: string | null;
   hasClientSecret: boolean;
+  // Whether OAuth tokens are stored (REQ-CONN-041). The tokens never are
+  // returned.
+  oauthAuthorized: boolean;
   setupState: SetupState;
   iconUrl: string;
   enabled: boolean;

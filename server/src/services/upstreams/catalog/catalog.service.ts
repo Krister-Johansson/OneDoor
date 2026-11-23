@@ -110,17 +110,25 @@ export class CatalogService {
       }
 
       const sameOption = existing.catalogAuthOptionId === option.id;
-      const updated = await this.prisma.connection.update({
-        where: { id: existing.id, ownerId },
-        data: sameOption
-          ? { enabled: true }
-          : {
-              enabled: true,
-              catalogAuthOptionId: option.id,
-              apiKeyCiphertext: null,
-              apiKeyKeyId: null,
-            },
-        include: CONNECTION_INCLUDE,
+      const updated = await this.prisma.$transaction(async (tx) => {
+        // Another auth option starts from no credentials, OAuth included.
+        if (!sameOption) {
+          await tx.connectionOAuth.deleteMany({
+            where: { connectionId: existing.id },
+          });
+        }
+        return tx.connection.update({
+          where: { id: existing.id, ownerId },
+          data: sameOption
+            ? { enabled: true }
+            : {
+                enabled: true,
+                catalogAuthOptionId: option.id,
+                apiKeyCiphertext: null,
+                apiKeyKeyId: null,
+              },
+          include: CONNECTION_INCLUDE,
+        });
       });
       this.registry.syncInBackground(updated.id);
       return toConnection(updated);

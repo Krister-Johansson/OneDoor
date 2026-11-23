@@ -1,3 +1,4 @@
+import type { OAuthClientProvider } from '@modelcontextprotocol/client';
 import type { EncryptedSecret } from '../../../crypto/secret-store.js';
 import type { AuthType } from '../../../generated/prisma/enums.js';
 
@@ -6,11 +7,21 @@ import type { AuthType } from '../../../generated/prisma/enums.js';
 // auth option.
 export interface UpstreamAuthTarget {
   connectionId: string;
+  ownerId: string;
   authType: AuthType;
   headerName: string | null;
   headerPrefix: string | null;
   // The stored, encrypted API key, or null when none is stored.
   apiKey: EncryptedSecret | null;
+  // When the owner last completed an OAuth authorization, or null.
+  oauthAuthorizedAt: Date | null;
+}
+
+// What the registry tells a provider while its client runs.
+export interface UpstreamAuthHooks {
+  // The stored credentials stopped working and were deleted, so the
+  // connection needs its owner again.
+  credentialsLost(): void;
 }
 
 // How a client authenticates to the upstream server. Holds a plaintext
@@ -20,4 +31,6 @@ export interface UpstreamAuth {
   headers: Record<string, string>;
   // Header names the guarded fetch drops when a redirect leaves the origin.
   sensitiveHeaders: string[];
+  // For OAuth: the SDK reads and refreshes the tokens through it.
+  authProvider?: OAuthClientProvider;
 }

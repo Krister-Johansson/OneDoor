@@ -106,6 +106,44 @@ describe('GuardedFetch (REQ-CONN-063)', () => {
     expect(redirected.status).toBe(401);
   });
 
+  it('sends a form body as URL-encoded text', async () => {
+    const open = await twin(startOpenTwin());
+    const res = await fetch(`${open.origin}/missing`, {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'refresh_token' }),
+    });
+    expect(res.status).toBe(404);
+    await expect(
+      fetch(`${open.origin}/missing`, {
+        method: 'POST',
+        body: new Blob(['x']),
+      }),
+    ).rejects.toThrow(/only string and form bodies/);
+  });
+
+  it('refuses to send a secret body to another origin when asked to (T21)', async () => {
+    const open = await twin(startOpenTwin());
+    const redirect = await twin(startRedirectTwin(`${open.origin}/token`));
+    const guardedBody = guarded.create({ bodyStaysOnOrigin: true });
+    const error = await guardedBody(redirect.url, {
+      method: 'POST',
+      body: new URLSearchParams({ refresh_token: 'secret' }),
+    }).catch((e: unknown) => e);
+    expect(findNetworkRuleError(error)?.message).toMatch(
+      /redirected a request body to/,
+    );
+
+    // A redirect that turns the request into a GET sends no body.
+    const seeOther = await twin(
+      startRedirectTwin(`${open.origin}/missing`, 303),
+    );
+    const res = await guardedBody(seeOther.url, {
+      method: 'POST',
+      body: new URLSearchParams({ refresh_token: 'secret' }),
+    });
+    expect(res.status).toBe(404);
+  });
+
   it('fails while reading a body larger than 1 MB', async () => {
     const large = await twin(startLargeResponseTwin(MAX_RESPONSE_BYTES + 1024));
     const res = await fetch(large.url);

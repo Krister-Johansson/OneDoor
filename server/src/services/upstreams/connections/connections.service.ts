@@ -190,19 +190,28 @@ export class ConnectionsService {
     }
 
     try {
-      const updated = await this.prisma.connection.update({
-        where: { id: row.id, ownerId },
-        data: {
-          displayName,
-          description:
-            input.description === undefined
-              ? row.description
-              : (input.description ?? ''),
-          url: input.url ?? row.url,
-          authType,
-          ...credentials,
-        },
-        include: CONNECTION_INCLUDE,
+      const updated = await this.prisma.$transaction(async (tx) => {
+        // OAuth tokens and the client registration belong to the old URL and
+        // auth type too (REQ-CONN-023).
+        if (urlChanged || authTypeChanged) {
+          await tx.connectionOAuth.deleteMany({
+            where: { connectionId: row.id },
+          });
+        }
+        return tx.connection.update({
+          where: { id: row.id, ownerId },
+          data: {
+            displayName,
+            description:
+              input.description === undefined
+                ? row.description
+                : (input.description ?? ''),
+            url: input.url ?? row.url,
+            authType,
+            ...credentials,
+          },
+          include: CONNECTION_INCLUDE,
+        });
       });
       if (urlChanged && input.url !== undefined) {
         this.iconRefresh.refreshConnectionInBackground(row.id, input.url);

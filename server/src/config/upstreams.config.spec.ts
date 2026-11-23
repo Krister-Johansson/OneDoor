@@ -5,9 +5,22 @@ describe('upstreamsConfig', () => {
     vi.unstubAllEnvs();
   });
 
-  it('connects to upstream servers by default', () => {
+  it('connects to upstream servers, and takes OAuth callbacks through the web server, by default', () => {
     vi.stubEnv('UPSTREAM_CONNECTING', undefined);
-    expect(upstreamsConfig()).toEqual({ connecting: true });
+    vi.stubEnv('OAUTH_REDIRECT_URL', undefined);
+    expect(upstreamsConfig()).toEqual({
+      connecting: true,
+      oauthRedirectUrl: 'http://localhost:3001/oauth/callback',
+    });
+  });
+
+  it('reads OAUTH_REDIRECT_URL and rejects one that is not http or https', () => {
+    vi.stubEnv('OAUTH_REDIRECT_URL', 'https://onedoor.example/oauth/callback');
+    expect(upstreamsConfig().oauthRedirectUrl).toBe(
+      'https://onedoor.example/oauth/callback',
+    );
+    vi.stubEnv('OAUTH_REDIRECT_URL', 'javascript:alert(1)');
+    expect(() => upstreamsConfig()).toThrow();
   });
 
   it.each([
