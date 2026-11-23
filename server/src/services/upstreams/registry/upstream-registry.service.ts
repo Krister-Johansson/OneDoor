@@ -237,6 +237,7 @@ export class UpstreamRegistryService
     ) {
       return { ownerId: row.ownerId, client: null };
     }
+    const app = row.catalogAuthOption ?? row;
     const auth: UpstreamAuthTarget = {
       connectionId,
       ownerId: row.ownerId,
@@ -248,12 +249,13 @@ export class UpstreamRegistryService
           ? { ciphertext: row.apiKeyCiphertext, keyId: row.apiKeyKeyId }
           : null,
       oauthAuthorizedAt: row.oauth?.authorizedAt ?? null,
-      oauthClientId: row.oauthClientId,
+      // A catalog-based connection uses its auth option's OAuth app.
+      oauthClientId: app.oauthClientId,
       oauthClientSecret:
-        row.oauthClientSecretCiphertext && row.oauthClientSecretKeyId
+        app.oauthClientSecretCiphertext && app.oauthClientSecretKeyId
           ? {
-              ciphertext: row.oauthClientSecretCiphertext,
-              keyId: row.oauthClientSecretKeyId,
+              ciphertext: app.oauthClientSecretCiphertext,
+              keyId: app.oauthClientSecretKeyId,
             }
           : null,
     };

@@ -26,11 +26,17 @@ export const CATALOG: CatalogSeed[] = [
       "GitHub's remote MCP server: repositories, issues, pull requests and more.",
     authOptions: [
       {
-        // A personal access token. OAuth needs a GitHub OAuth app.
+        // A personal access token.
         authType: 'API_KEY',
         url: 'https://api.githubcopilot.com/mcp/',
         headerName: 'Authorization',
         headerPrefix: 'Bearer',
+      },
+      {
+        // GitHub offers no dynamic client registration. The owner registers
+        // a GitHub OAuth app and sets it on this option (T22).
+        authType: 'OAUTH_MANUAL',
+        url: 'https://api.githubcopilot.com/mcp/',
       },
     ],
   },
@@ -55,7 +61,7 @@ export const CATALOG: CatalogSeed[] = [
 ];
 
 // Creates and updates the rows every environment needs. Safe to run more
-// than once.
+// than once. It never touches an option's OAuth app, which the API sets.
 export async function seed(prisma: PrismaClient): Promise<void> {
   await prisma.user.upsert({
     where: { name: DEFAULT_USER_NAME },

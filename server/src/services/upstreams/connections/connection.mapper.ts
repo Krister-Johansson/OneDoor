@@ -61,6 +61,8 @@ export function toConnection(row: ConnectionRow): Connection {
       ),
     });
   }
+  // OAUTH_MANUAL: a catalog-based connection uses its option's OAuth app.
+  const oauthClientId = settings.oauthClientId;
   const hasApiKey = row.apiKeyCiphertext !== null;
   const oauthAuthorized = (row.oauth?.tokensCiphertext ?? null) !== null;
   return {
@@ -73,14 +75,14 @@ export function toConnection(row: ConnectionRow): Connection {
     headerName: settings.headerName,
     headerPrefix: settings.headerPrefix,
     hasApiKey,
-    oauthClientId: row.oauthClientId,
-    hasClientSecret: row.oauthClientSecretCiphertext !== null,
+    oauthClientId,
+    hasClientSecret: settings.oauthClientSecretCiphertext !== null,
     oauthAuthorized,
     setupState: setupStateOf(
       authType,
       hasApiKey,
       oauthAuthorized,
-      row.oauthClientId !== null,
+      oauthClientId !== null,
     ),
     iconUrl: iconPath(
       row.catalogEntry ? row.catalogEntry.iconId : row.iconId,

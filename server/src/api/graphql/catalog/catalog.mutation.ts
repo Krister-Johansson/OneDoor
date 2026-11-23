@@ -4,6 +4,7 @@ import { CurrentCaller } from '../../../auth/current-caller.decorator.js';
 import { AuthType } from '../../../generated/prisma/enums.js';
 import { CatalogService } from '../../../services/upstreams/catalog/catalog.service.js';
 import { ConnectionModel } from '../connections/models/connection.model.js';
+import { SetCatalogOAuthClientInput } from './inputs/set-catalog-oauth-client.input.js';
 import { CatalogEntryModel } from './models/catalog-entry.model.js';
 
 @Resolver(() => CatalogEntryModel)
@@ -23,6 +24,22 @@ export class CatalogMutation {
       caller.userId,
       catalogEntryId,
       authType,
+    );
+  }
+
+  @Mutation(() => CatalogEntryModel, {
+    description:
+      "Sets the OAuth app of a catalog entry's OAUTH_MANUAL option and returns the entry (T22). Every connection on the option uses the app. Register the URL from oauthRedirectUrl in the app.",
+  })
+  setCatalogOAuthClient(
+    @CurrentCaller() caller: Caller,
+    @Args('catalogEntryId', { type: () => ID }) catalogEntryId: string,
+    @Args('input') input: SetCatalogOAuthClientInput,
+  ): Promise<CatalogEntryModel> {
+    return this.catalogService.setOAuthClient(
+      caller.userId,
+      catalogEntryId,
+      input,
     );
   }
 }

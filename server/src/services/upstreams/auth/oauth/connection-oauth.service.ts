@@ -48,34 +48,42 @@ export class ConnectionOAuthService {
   }
 
   // The OAuth app an OAUTH_MANUAL connection uses: the client id and, for a
-  // confidential client, the decrypted secret. Null when no client id is
-  // stored. Holds a secret: keep it in memory only.
+  // confidential client, the decrypted secret. A catalog-based connection
+  // uses its auth option's app (T22). Null when no client id is stored.
+  // Holds a secret: keep it in memory only.
   async manualClient(
     connectionId: string,
   ): Promise<OAuthClientInformation | null> {
+    const app = {
+      oauthClientId: true,
+      oauthClientSecretCiphertext: true,
+      oauthClientSecretKeyId: true,
+    } as const;
     const row = await this.run(() =>
       this.prisma.connection.findUnique({
         where: { id: connectionId },
-        select: {
-          oauthClientId: true,
-          oauthClientSecretCiphertext: true,
-          oauthClientSecretKeyId: true,
-        },
+        select: { ...app, catalogAuthOption: { select: { id: true, ...app } } },
       }),
     );
-    if (!row?.oauthClientId) return null;
+    if (!row) return null;
+    const option = row.catalogAuthOption;
+    const source = option ?? row;
+    if (!source.oauthClientId) return null;
+    const context = option
+      ? `catalog_auth_option:${option.id}:oauth_client_secret`
+      : `connection:${connectionId}:oauth_client_secret`;
     const secret =
-      row.oauthClientSecretCiphertext && row.oauthClientSecretKeyId
+      source.oauthClientSecretCiphertext && source.oauthClientSecretKeyId
         ? await this.secretStore.decrypt(
             {
-              ciphertext: row.oauthClientSecretCiphertext,
-              keyId: row.oauthClientSecretKeyId,
+              ciphertext: source.oauthClientSecretCiphertext,
+              keyId: source.oauthClientSecretKeyId,
             },
-            `connection:${connectionId}:oauth_client_secret`,
+            context,
           )
         : undefined;
     return {
-      client_id: row.oauthClientId,
+      client_id: source.oauthClientId,
       ...(secret !== undefined && { client_secret: secret }),
     };
   }

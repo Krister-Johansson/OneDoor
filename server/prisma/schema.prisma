@@ -55,21 +55,28 @@ model CatalogEntry {
 }
 
 /// One way to connect to a catalog entry: an auth type with its URL and, for
-/// API_KEY, the header settings (REQ-CONN-010). OAuth client details for an
-/// OAUTH_MANUAL option come from server config.
+/// API_KEY, the header settings (REQ-CONN-010). An OAUTH_MANUAL option holds
+/// the OAuth app that every connection on it uses (T22), set through the API.
 model CatalogAuthOption {
-  id             String       @id @default(uuid(7)) @db.Uuid
-  catalogEntryId String       @map("catalog_entry_id") @db.Uuid
-  catalogEntry   CatalogEntry @relation(fields: [catalogEntryId], references: [id], onDelete: Cascade)
-  authType       AuthType     @map("auth_type")
-  url            String
+  id                          String       @id @default(uuid(7)) @db.Uuid
+  catalogEntryId              String       @map("catalog_entry_id") @db.Uuid
+  catalogEntry                CatalogEntry @relation(fields: [catalogEntryId], references: [id], onDelete: Cascade)
+  authType                    AuthType     @map("auth_type")
+  url                         String
   /// Only for API_KEY.
-  headerName     String?      @map("header_name")
+  headerName                  String?      @map("header_name")
   /// Only for API_KEY. May be empty.
-  headerPrefix   String?      @map("header_prefix")
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  connections    Connection[]
+  headerPrefix                String?      @map("header_prefix")
+  /// Only for OAUTH_MANUAL. Null until the OAuth app is set; the option
+  /// cannot be switched on before. Not a secret.
+  oauthClientId               String?      @map("oauth_client_id")
+  /// Encrypted by SecretStore with the context
+  /// `catalog_auth_option:<id>:oauth_client_secret`. Null for a public client.
+  oauthClientSecretCiphertext String?      @map("oauth_client_secret_ciphertext")
+  oauthClientSecretKeyId      String?      @map("oauth_client_secret_key_id")
+  createdAt                   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  connections                 Connection[]
 
   @@unique([catalogEntryId, authType])
   /// Target of the connection's composite foreign key, so a connection's
@@ -105,7 +112,8 @@ model Connection {
   /// custom or catalog-based.
   apiKeyCiphertext            String?            @map("api_key_ciphertext")
   apiKeyKeyId                 String?            @map("api_key_key_id")
-  /// Only for custom OAUTH_MANUAL connections. Not a secret.
+  /// Only for custom OAUTH_MANUAL connections; a catalog-based one uses its
+  /// auth option's OAuth app. Not a secret.
   oauthClientId               String?            @map("oauth_client_id")
   /// Encrypted like the API key, with the context `connection:<id>:oauth_client_secret`.
   oauthClientSecretCiphertext String?            @map("oauth_client_secret_ciphertext")

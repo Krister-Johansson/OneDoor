@@ -21,4 +21,17 @@ export class CatalogAuthOptionModel implements CatalogAuthOption {
     description: 'Only for API_KEY. May be empty.',
   })
   headerPrefix: string | null;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Only for OAUTH_MANUAL: the client id of the OAuth app that every connection on this option uses. Null until it is set; the option cannot be switched on before (T22).',
+  })
+  oauthClientId: string | null;
+
+  @Field({
+    description:
+      "Whether the OAuth app's client secret is stored. The secret is never returned.",
+  })
+  hasClientSecret: boolean;
 }

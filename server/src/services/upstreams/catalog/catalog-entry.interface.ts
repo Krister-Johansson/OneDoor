@@ -7,6 +7,10 @@ export interface CatalogAuthOption {
   url: string;
   headerName: string | null;
   headerPrefix: string | null;
+  // OAUTH_MANUAL only: the OAuth app every connection on the option uses
+  // (T22). Null until it is set.
+  oauthClientId: string | null;
+  hasClientSecret: boolean;
 }
 
 // A pre-installed server, with the caller's connection if any (REQ-CONN-011).
@@ -18,4 +22,12 @@ export interface CatalogEntry {
   iconUrl: string;
   authOptions: CatalogAuthOption[];
   connection: Connection | null;
+}
+
+// The OAuth app of a catalog entry's OAUTH_MANUAL option (T22). The client
+// secret follows the secret rule: left out keeps it, null deletes it, a
+// string replaces it.
+export interface SetCatalogOAuthClientData {
+  clientId: string;
+  clientSecret?: string | null;
 }
