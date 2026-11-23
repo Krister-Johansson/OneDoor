@@ -20,6 +20,8 @@ describe('ApiKeyAuthProvider (REQ-CONN-040)', () => {
       ownerId: '0190c3c8-0000-7000-8000-0000000000aa',
       authType: 'API_KEY',
       oauthAuthorizedAt: null,
+      oauthClientId: null,
+      oauthClientSecret: null,
       headerName: 'Authorization',
       headerPrefix: 'Bearer',
       apiKey: await store.encrypt(key, CONTEXT),

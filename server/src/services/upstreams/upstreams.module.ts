@@ -6,6 +6,7 @@ import { upstreamsConfig } from '../../config/upstreams.config.js';
 import { CryptoModule } from '../../crypto/crypto.module.js';
 import { SecretStore } from '../../crypto/secret-store.js';
 import { EventsModule } from '../../events/events.module.js';
+import { AuthType } from '../../generated/prisma/enums.js';
 import { NetModule } from '../../net/net.module.js';
 import { PrismaModule } from '../../prisma/prisma.module.js';
 import { QueueModule } from '../../queue/queue.module.js';
@@ -16,7 +17,7 @@ import { ConnectionOAuthService } from './auth/oauth/connection-oauth.service.js
 import { OAuthService } from './auth/oauth/oauth.service.js';
 import { OAuthFlowStore } from './auth/oauth/oauth-flow-store.js';
 import { RedisOAuthFlowStore } from './auth/oauth/redis-oauth-flow-store.js';
-import { OAuthDcrAuthProvider } from './auth/oauth-dcr-auth-provider.js';
+import { OAuthAuthProvider } from './auth/oauth-auth-provider.js';
 import { UpstreamAuthProviders } from './auth/upstream-auth-providers.js';
 import { CatalogService } from './catalog/catalog.service.js';
 import { ConnectionsService } from './connections/connections.service.js';
@@ -63,7 +64,16 @@ import { ToolsService } from './tools/tools.service.js';
         new UpstreamAuthProviders([
           new NoneAuthProvider(),
           new ApiKeyAuthProvider(secretStore),
-          new OAuthDcrAuthProvider(oauth, upstreams.oauthRedirectUrl),
+          new OAuthAuthProvider(
+            AuthType.OAUTH_DCR,
+            oauth,
+            upstreams.oauthRedirectUrl,
+          ),
+          new OAuthAuthProvider(
+            AuthType.OAUTH_MANUAL,
+            oauth,
+            upstreams.oauthRedirectUrl,
+          ),
         ]),
     },
     ConnectionOAuthService,

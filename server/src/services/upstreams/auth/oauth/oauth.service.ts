@@ -1,4 +1,7 @@
-import { auth } from '@modelcontextprotocol/client';
+import {
+  auth,
+  type OAuthClientInformation,
+} from '@modelcontextprotocol/client';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { upstreamsConfig } from '../../../../config/upstreams.config.js';
@@ -20,8 +23,9 @@ import { ConnectionOAuthProvider } from './connection-oauth-provider.js';
 import { OAUTH_FLOW_TTL_MS, OAuthOutcome } from './oauth.interface.js';
 import { OAuthFlowStore } from './oauth-flow-store.js';
 
-// The owner's side of OAuth with dynamic client registration (T21): start
-// an authorization, and finish it in the callback.
+// The owner's side of OAuth (T21, T22): start an authorization, and finish
+// it in the callback. OAUTH_DCR registers OneDoor with the authorization
+// server; OAUTH_MANUAL uses the OAuth app the owner entered.
 @Injectable()
 export class OAuthService {
   private readonly logger = new Logger(OAuthService.name);
@@ -45,12 +49,23 @@ export class OAuthService {
       ownerId,
       connectionId,
     );
-    if (connection.authType !== AuthType.OAUTH_DCR) {
+    if (!isOAuth(connection.authType)) {
       throw new ValidationError(
-        'Only OAUTH_DCR connections are authorized this way',
+        'Only OAUTH_DCR and OAUTH_MANUAL connections are authorized this way',
       );
     }
-    const provider = this.provider(connectionId, ownerId, { kind: 'start' });
+    const client = await this.manualClient(connectionId, connection.authType);
+    if (client === null) {
+      throw new ValidationError(
+        `${connection.displayName} needs the client id of its OAuth app first`,
+      );
+    }
+    const provider = this.provider(
+      connectionId,
+      ownerId,
+      { kind: 'start' },
+      client,
+    );
     try {
       await auth(provider, {
         serverUrl: connection.url,
@@ -116,18 +131,22 @@ export class OAuthService {
       }
       throw error;
     }
-    if (!code || connection.authType !== AuthType.OAUTH_DCR) {
+    if (!code || !isOAuth(connection.authType)) {
       return this.webUrl(connectionId, OAuthOutcome.FAILED);
     }
+    const client = await this.manualClient(connectionId, connection.authType);
+    if (client === null) return this.webUrl(connectionId, OAuthOutcome.FAILED);
 
     const codeVerifier = await this.secretStore.decrypt(
       flow.codeVerifier,
       `oauth_flow:${state}:code_verifier`,
     );
-    const provider = this.provider(connectionId, ownerId, {
-      kind: 'callback',
-      codeVerifier,
-    });
+    const provider = this.provider(
+      connectionId,
+      ownerId,
+      { kind: 'callback', codeVerifier },
+      client,
+    );
     try {
       const result = await auth(provider, {
         serverUrl: connection.url,
@@ -149,10 +168,26 @@ export class OAuthService {
     return this.webUrl(connectionId, OAuthOutcome.AUTHORIZED);
   }
 
+  // The redirect URI to register in an OAuth app (OAUTH_MANUAL).
+  redirectUrl(): string {
+    return this.upstreams.oauthRedirectUrl;
+  }
+
+  // OAUTH_MANUAL: the owner's OAuth app, or null when it has no client id.
+  // OAUTH_DCR: undefined, so OneDoor registers its own client.
+  private async manualClient(
+    connectionId: string,
+    authType: AuthType,
+  ): Promise<OAuthClientInformation | null | undefined> {
+    if (authType !== AuthType.OAUTH_MANUAL) return undefined;
+    return this.store.manualClient(connectionId);
+  }
+
   private provider(
     connectionId: string,
     ownerId: string,
     mode: ConstructorParameters<typeof ConnectionOAuthProvider>[4],
+    client: OAuthClientInformation | undefined,
   ): ConnectionOAuthProvider {
     return new ConnectionOAuthProvider(
       connectionId,
@@ -160,6 +195,7 @@ export class OAuthService {
       this.store,
       this.upstreams.oauthRedirectUrl,
       mode,
+      client,
     );
   }
 
@@ -172,6 +208,10 @@ export class OAuthService {
     url.searchParams.set('oauth', outcome);
     return url.toString();
   }
+}
+
+function isOAuth(authType: AuthType): boolean {
+  return authType === AuthType.OAUTH_DCR || authType === AuthType.OAUTH_MANUAL;
 }
 
 // Fixed text for the log: an upstream's own error text is not repeated.

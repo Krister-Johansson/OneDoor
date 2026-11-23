@@ -1,4 +1,5 @@
 import type {
+  OAuthClientInformation,
   OAuthDiscoveryState,
   StoredOAuthClientInformation,
   StoredOAuthTokens,
@@ -43,6 +44,39 @@ export class ConnectionOAuthService {
       discovery: (row.discoveryState ?? undefined) as
         | OAuthDiscoveryState
         | undefined,
+    };
+  }
+
+  // The OAuth app an OAUTH_MANUAL connection uses: the client id and, for a
+  // confidential client, the decrypted secret. Null when no client id is
+  // stored. Holds a secret: keep it in memory only.
+  async manualClient(
+    connectionId: string,
+  ): Promise<OAuthClientInformation | null> {
+    const row = await this.run(() =>
+      this.prisma.connection.findUnique({
+        where: { id: connectionId },
+        select: {
+          oauthClientId: true,
+          oauthClientSecretCiphertext: true,
+          oauthClientSecretKeyId: true,
+        },
+      }),
+    );
+    if (!row?.oauthClientId) return null;
+    const secret =
+      row.oauthClientSecretCiphertext && row.oauthClientSecretKeyId
+        ? await this.secretStore.decrypt(
+            {
+              ciphertext: row.oauthClientSecretCiphertext,
+              keyId: row.oauthClientSecretKeyId,
+            },
+            `connection:${connectionId}:oauth_client_secret`,
+          )
+        : undefined;
+    return {
+      client_id: row.oauthClientId,
+      ...(secret !== undefined && { client_secret: secret }),
     };
   }
 

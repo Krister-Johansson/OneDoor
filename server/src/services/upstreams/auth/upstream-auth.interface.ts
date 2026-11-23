@@ -15,6 +15,9 @@ export interface UpstreamAuthTarget {
   apiKey: EncryptedSecret | null;
   // When the owner last completed an OAuth authorization, or null.
   oauthAuthorizedAt: Date | null;
+  // The OAuth app of an OAUTH_MANUAL connection, as stored.
+  oauthClientId: string | null;
+  oauthClientSecret: EncryptedSecret | null;
 }
 
 // What the registry tells a provider while its client runs.

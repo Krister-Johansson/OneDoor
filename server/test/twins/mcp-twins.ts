@@ -273,13 +273,28 @@ interface IssuedCode {
   challenge: string;
 }
 
-// An MCP server protected by OAuth with dynamic client registration that
-// runs the whole flow: /register, /authorize (redirects at once with a code,
+// A client registered with the authorization server in advance, as an
+// OAuth app (OAUTH_MANUAL, T22). With a secret it is a confidential client
+// and must authenticate at /token (client_secret_basic or _post).
+export interface PreRegisteredClient {
+  id: string;
+  secret?: string;
+  redirectUris: string[];
+}
+
+// An MCP server protected by OAuth that runs the whole flow: /register
+// (dynamic client registration), /authorize (redirects at once with a code,
 // as if the user agreed), /token for authorization_code with PKCE S256 and
 // for refresh_token (rotating), and /mcp, which accepts the access tokens
-// it issued and lists the tools `alpha` and `beta`.
-export async function startOAuthFlowTwin(): Promise<OAuthFlowTwin> {
-  const clients = new Map<string, string[]>();
+// it issued and lists the tools `alpha` and `beta`. With `client`, the
+// server knows only that client and offers no registration.
+export async function startOAuthFlowTwin(
+  options: { client?: PreRegisteredClient } = {},
+): Promise<OAuthFlowTwin> {
+  const preRegistered = options.client;
+  const clients = new Map<string, string[]>(
+    preRegistered ? [[preRegistered.id, preRegistered.redirectUris]] : [],
+  );
   const codes = new Map<string, IssuedCode>();
   const accessTokens = new Set<string>();
   const refreshTokens = new Map<string, string>();
@@ -325,14 +340,20 @@ export async function startOAuthFlowTwin(): Promise<OAuthFlowTwin> {
         issuer: origin,
         authorization_endpoint: `${origin}/authorize`,
         token_endpoint: `${origin}/token`,
-        registration_endpoint: `${origin}/register`,
+        ...(!preRegistered && { registration_endpoint: `${origin}/register` }),
         response_types_supported: ['code'],
         grant_types_supported: ['authorization_code', 'refresh_token'],
         code_challenge_methods_supported: ['S256'],
-        token_endpoint_auth_methods_supported: ['none'],
+        token_endpoint_auth_methods_supported: preRegistered?.secret
+          ? ['client_secret_basic', 'client_secret_post']
+          : ['none'],
       });
     }
-    if (url.pathname === '/register' && req.method === 'POST') {
+    if (
+      url.pathname === '/register' &&
+      req.method === 'POST' &&
+      !preRegistered
+    ) {
       const metadata = JSON.parse(await readBody(req)) as {
         redirect_uris?: string[];
       };
@@ -375,7 +396,21 @@ export async function startOAuthFlowTwin(): Promise<OAuthFlowTwin> {
     }
     if (url.pathname === '/token' && req.method === 'POST') {
       const form = new URLSearchParams(await readBody(req));
-      const clientId = form.get('client_id') ?? '';
+      // client_secret_basic, or the id (and secret) in the form.
+      const basic = req.headers.authorization?.match(/^Basic (.+)$/)?.[1];
+      const [basicId, basicSecret] = basic
+        ? Buffer.from(basic, 'base64')
+            .toString('utf8')
+            .split(':')
+            .map((part) => decodeURIComponent(part))
+        : [];
+      const clientId = basicId ?? form.get('client_id') ?? '';
+      if (preRegistered?.secret) {
+        const secret = basicSecret ?? form.get('client_secret');
+        if (clientId !== preRegistered.id || secret !== preRegistered.secret) {
+          return json(res, 401, { error: 'invalid_client' });
+        }
+      }
       if (form.get('grant_type') === 'authorization_code') {
         const issued = codes.get(form.get('code') ?? '');
         codes.delete(form.get('code') ?? '');

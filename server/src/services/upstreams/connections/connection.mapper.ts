@@ -25,11 +25,12 @@ export type ConnectionRow = ConnectionRecord & {
   oauth: { tokensCiphertext: string | null; authorizedAt: Date | null } | null;
 };
 
-// REQ-CONN-044. OAUTH_MANUAL waits for T22.
+// REQ-CONN-044. OAUTH_MANUAL needs its client id (the OAuth app) and tokens.
 export function setupStateOf(
   authType: AuthType,
   hasApiKey: boolean,
   oauthAuthorized: boolean,
+  hasOAuthClient: boolean,
 ): SetupState {
   switch (authType) {
     case AuthType.NONE:
@@ -39,7 +40,9 @@ export function setupStateOf(
     case AuthType.OAUTH_DCR:
       return oauthAuthorized ? SetupState.READY : SetupState.NEEDS_CREDENTIALS;
     case AuthType.OAUTH_MANUAL:
-      return SetupState.NEEDS_CREDENTIALS;
+      return hasOAuthClient && oauthAuthorized
+        ? SetupState.READY
+        : SetupState.NEEDS_CREDENTIALS;
   }
 }
 
@@ -73,7 +76,12 @@ export function toConnection(row: ConnectionRow): Connection {
     oauthClientId: row.oauthClientId,
     hasClientSecret: row.oauthClientSecretCiphertext !== null,
     oauthAuthorized,
-    setupState: setupStateOf(authType, hasApiKey, oauthAuthorized),
+    setupState: setupStateOf(
+      authType,
+      hasApiKey,
+      oauthAuthorized,
+      row.oauthClientId !== null,
+    ),
     iconUrl: iconPath(
       row.catalogEntry ? row.catalogEntry.iconId : row.iconId,
       displayName,
