@@ -1,46 +1,45 @@
+import { Link } from "@tanstack/react-router"
+import { ChevronLeft } from "lucide-react"
 import { useState } from "react"
 import { AuthorizeButton } from "#/components/servers/authorize-button"
-import { ConnectionStatusBadge } from "#/components/servers/connection-status-badge"
-import { ResyncToolsButton } from "#/components/servers/resync-tools-button"
-import { ToolCountBadge } from "#/components/servers/tool-count-badge"
-import { Badge } from "#/components/ui/badge"
 import { useConnectionTools } from "#/hooks/use-connection-tools"
 
-// The page heading of the tools screen: the server's name, URL and live
-// state, with the re-sync action.
+// The top of a server's page: the way back, the server's icon, name,
+// description and URL, and the action the server needs first (Authorize).
 export function ServerHeader({ connectionId }: { connectionId: string }) {
   const connection = useConnectionTools(connectionId)
   const [error, setError] = useState<string | null>(null)
 
   return (
-    <header className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <img
-          src={connection.iconUrl}
-          alt=""
-          className="size-10 shrink-0 rounded-md"
-        />
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold">
-            {connection.displayName}
-          </h1>
-          <p className="text-muted-foreground truncate text-sm">
-            {connection.url}
-          </p>
+    <header className="flex flex-col gap-4">
+      <Link
+        to="/servers"
+        aria-label="Back to servers"
+        className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-sm"
+      >
+        <ChevronLeft className="size-4" aria-hidden />
+        Servers
+      </Link>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-4">
+          <img
+            src={connection.iconUrl}
+            alt=""
+            className="size-12 shrink-0 rounded-md"
+          />
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="truncate text-2xl font-bold">
+              {connection.displayName}
+            </h1>
+            {connection.description && (
+              <p className="text-muted-foreground">{connection.description}</p>
+            )}
+            <p className="text-muted-foreground truncate text-sm">
+              {connection.url}
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={connection.enabled ? "default" : "outline"}>
-          {connection.enabled ? "Enabled" : "Disabled"}
-        </Badge>
-        <ConnectionStatusBadge status={connection.status} />
         <AuthorizeButton
-          connection={connection}
-          serverName={connection.displayName}
-          onError={setError}
-        />
-        <ToolCountBadge connection={connection} />
-        <ResyncToolsButton
           connection={connection}
           serverName={connection.displayName}
           onError={setError}

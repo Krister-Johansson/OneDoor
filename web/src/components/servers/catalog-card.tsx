@@ -1,134 +1,103 @@
-import { Link } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
-import { Badge } from "#/components/ui/badge"
-import { buttonVariants } from "#/components/ui/button"
-import {
-  Card,
-  CardAction,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "#/components/ui/card"
-import { Switch } from "#/components/ui/switch"
+import { Button } from "#/components/ui/button"
 import type { AuthType, CatalogQuery } from "#/gql/graphql"
-import { useSetConnectionEnabled } from "#/hooks/use-set-connection-enabled"
 import { useSwitchOnCatalogEntry } from "#/hooks/use-switch-on-catalog-entry"
 import { errorCode } from "#/lib/graphql-error"
 import { AuthOptionDialog } from "./auth-option-dialog"
-import { AuthorizeButton } from "./authorize-button"
-import { ConnectionStatusBadge } from "./connection-status-badge"
-import { ResyncToolsButton } from "./resync-tools-button"
-import { ToolCountBadge } from "./tool-count-badge"
+import { ConnectionSummary } from "./connection-summary"
+import { ServerCard } from "./server-card"
+import { ToolCountText } from "./tool-count-text"
 
 type CatalogEntry = CatalogQuery["catalog"][number]
 
-// One catalog entry with its switch (REQ-CONN-080).
+// One catalog entry (REQ-CONN-080). With a connection it links to the
+// server's page, which has the switch and the other actions. Without one it
+// offers "Add", which switches the entry on and opens that page.
 export function CatalogCard({ entry }: { entry: CatalogEntry }) {
-  const { switchOn, loading: switchingOn } = useSwitchOnCatalogEntry()
-  const { setEnabled, loading: switchingOff } = useSetConnectionEnabled()
+  const connection = entry.connection
+  const { switchOn, loading } = useSwitchOnCatalogEntry()
+  const navigate = useNavigate()
   const [choosing, setChoosing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const connection = entry.connection
 
-  async function run(on: boolean, action: () => Promise<unknown>) {
+  if (connection) {
+    return (
+      <ServerCard
+        name={entry.displayName}
+        iconUrl={entry.iconUrl}
+        fromCatalog
+        connectionId={connection.id}
+        detail={<ToolCountText toolCount={connection.toolCount} />}
+        aside={<ConnectionSummary connection={connection} />}
+      />
+    )
+  }
+
+  async function add(authType: AuthType) {
+    setChoosing(false)
     setError(null)
     try {
-      await action()
+      const { data } = await switchOn(entry.id, authType)
+      const id = data?.switchOnCatalogEntry.id
+      if (id) {
+        await navigate({
+          to: "/servers/$connectionId",
+          params: { connectionId: id },
+        })
+      }
     } catch (caught) {
-      setError(switchErrorMessage(caught, entry.displayName, on))
+      setError(addErrorMessage(caught, entry.displayName))
     }
   }
 
-  function turnOn(authType: AuthType) {
-    setChoosing(false)
-    void run(true, () => switchOn(entry.id, authType))
-  }
-
-  function onCheckedChange(checked: boolean) {
-    if (!checked) {
-      if (connection) void run(false, () => setEnabled(connection.id, false))
-      return
-    }
-    // An existing connection keeps its auth option and its credentials.
-    const authType =
-      connection?.authType ??
-      (entry.authOptions.length === 1
-        ? entry.authOptions[0]?.authType
-        : undefined)
-    if (authType) turnOn(authType)
+  function onAdd() {
+    const [only] = entry.authOptions
+    if (entry.authOptions.length === 1 && only) void add(only.authType)
     else setChoosing(true)
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <img
-            src={entry.iconUrl}
-            alt=""
-            className="size-8 shrink-0 rounded-sm"
-          />
-          <CardTitle>{entry.displayName}</CardTitle>
-        </div>
-        <CardDescription>{entry.description}</CardDescription>
-        <CardAction>
-          <Switch
-            checked={connection?.enabled ?? false}
-            disabled={switchingOn || switchingOff}
-            onCheckedChange={onCheckedChange}
-            aria-label={`Use ${entry.displayName}`}
-          />
-        </CardAction>
-        {connection?.setupState === "NEEDS_CREDENTIALS" && (
-          <Badge variant="outline">Needs credentials</Badge>
-        )}
-        {connection && (
-          <div className="flex flex-wrap items-center gap-2">
-            <ConnectionStatusBadge status={connection.status} />
-            <AuthorizeButton
-              connection={connection}
-              serverName={entry.displayName}
-              onError={setError}
-            />
-            <ToolCountBadge connection={connection} />
-            <ResyncToolsButton
-              connection={connection}
-              serverName={entry.displayName}
-              onError={setError}
-            />
-            <Link
-              to="/servers/$connectionId"
-              params={{ connectionId: connection.id }}
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              Tools
-            </Link>
-          </div>
-        )}
-        {error && (
-          <p role="alert" className="text-destructive text-sm">
-            {error}
-          </p>
-        )}
-      </CardHeader>
+    <ServerCard
+      name={entry.displayName}
+      iconUrl={entry.iconUrl}
+      fromCatalog
+      detail={entry.description}
+      aside={
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={loading}
+          onClick={onAdd}
+          aria-label={`Add ${entry.displayName}`}
+        >
+          Add
+        </Button>
+      }
+    >
+      {error && (
+        <p role="alert" className="text-destructive text-sm">
+          {error}
+        </p>
+      )}
       <AuthOptionDialog
         open={choosing}
         onOpenChange={setChoosing}
         serverName={entry.displayName}
         authTypes={entry.authOptions.map((option) => option.authType)}
-        onChoose={turnOn}
+        onChoose={(authType) => void add(authType)}
       />
-    </Card>
+    </ServerCard>
   )
 }
 
-function switchErrorMessage(error: unknown, name: string, on: boolean) {
+function addErrorMessage(error: unknown, name: string) {
   switch (errorCode(error)) {
     case "CONFLICT":
-      return `One of your servers is already named ${name}. Rename it to switch this entry on.`
+      return `One of your servers is already named ${name}. Rename it to add this one.`
     case "NOT_FOUND":
       return `${name} is no longer in the catalog.`
     default:
-      return `Could not switch ${name} ${on ? "on" : "off"}. Try again.`
+      return `Could not add ${name}. Try again.`
   }
 }

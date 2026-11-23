@@ -290,7 +290,9 @@ export type ConnectionToolsQuery = {
   connection: {
     __typename: "Connection"
     id: string
+    catalogEntryId: string | null
     displayName: string
+    description: string
     url: string
     iconUrl: string
     authType: AuthType
@@ -1110,7 +1112,12 @@ export const ConnectionToolsDocument = {
               kind: "SelectionSet",
               selections: [
                 { kind: "Field", name: { kind: "Name", value: "id" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "catalogEntryId" },
+                },
                 { kind: "Field", name: { kind: "Name", value: "displayName" } },
+                { kind: "Field", name: { kind: "Name", value: "description" } },
                 { kind: "Field", name: { kind: "Name", value: "url" } },
                 { kind: "Field", name: { kind: "Name", value: "iconUrl" } },
                 { kind: "Field", name: { kind: "Name", value: "authType" } },

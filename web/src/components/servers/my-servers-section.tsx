@@ -9,10 +9,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "#/components/ui/empty"
-import { ItemGroup } from "#/components/ui/item"
 import { useConnections } from "#/hooks/use-connections"
 import { AddServerDialog } from "./add-server-dialog"
-import { MyServerRow } from "./my-server-row"
+import { ConnectionSummary } from "./connection-summary"
+import { ServerCard } from "./server-card"
+import { ToolCountText } from "./tool-count-text"
 
 // The caller's custom servers, sorted by display name (REQ-CONN-080).
 export function MyServersSection() {
@@ -50,11 +51,19 @@ export function MyServersSection() {
           </EmptyContent>
         </Empty>
       ) : (
-        <ItemGroup>
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {custom.map((connection) => (
-            <MyServerRow key={connection.id} connection={connection} />
+            <ServerCard
+              key={connection.id}
+              name={connection.displayName}
+              iconUrl={connection.iconUrl}
+              fromCatalog={false}
+              connectionId={connection.id}
+              detail={<ToolCountText toolCount={connection.toolCount} />}
+              aside={<ConnectionSummary connection={connection} />}
+            />
           ))}
-        </ItemGroup>
+        </ul>
       )}
       <AddServerDialog open={adding} onOpenChange={setAdding} />
     </section>
