@@ -24,8 +24,13 @@ export type CheckCredentialsInput = {
   url: string
 }
 
-/** The state of a connection's upstream client. OFF: no client is wanted (disabled, not READY, or an auth type without a client yet). FAILED: the last connect failed, until the next change to the connection. */
-export type ConnectionStatus = "CONNECTED" | "CONNECTING" | "FAILED" | "OFF"
+/** The state of a connection's upstream client. OFF: no client is wanted (disabled, not READY, or an auth type without a client yet). FAILED: the last connect failed. REFUSED_CREDENTIALS: the server refused the credentials (401 or 403). FAILED and REFUSED_CREDENTIALS last until the next change to the connection. */
+export type ConnectionStatus =
+  | "CONNECTED"
+  | "CONNECTING"
+  | "FAILED"
+  | "OFF"
+  | "REFUSED_CREDENTIALS"
 
 /** A custom server to add (REQ-CONN-020). */
 export type CreateConnectionInput = {

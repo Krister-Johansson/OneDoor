@@ -7,6 +7,12 @@ import { fetchUrlProblem } from '../../../net/url-policy.js';
 export const DEFAULT_HEADER_NAME = 'Authorization';
 export const DEFAULT_HEADER_PREFIX = 'Bearer';
 
+// REQ-CONN-040: the prefix, a space and the key; the key alone when the
+// prefix is empty.
+export function apiKeyHeaderValue(prefix: string, key: string): string {
+  return prefix === '' ? key : `${prefix} ${key}`;
+}
+
 // REQ-CONN-022: the same rule the guarded fetch applies.
 export const serverUrlProblem = fetchUrlProblem;
 

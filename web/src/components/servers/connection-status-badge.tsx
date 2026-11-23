@@ -5,6 +5,7 @@ const LABELS: Record<Exclude<ConnectionStatus, "OFF">, string> = {
   CONNECTING: "Connecting",
   CONNECTED: "Connected",
   FAILED: "Unreachable",
+  REFUSED_CREDENTIALS: "Credentials refused",
 }
 
 // The live state of a connection's upstream client. OFF shows nothing: the
@@ -18,7 +19,13 @@ export function ConnectionStatusBadge({
   return (
     <span aria-live="polite" className="contents">
       {status !== "OFF" && (
-        <Badge variant={status === "FAILED" ? "destructive" : "secondary"}>
+        <Badge
+          variant={
+            status === "FAILED" || status === "REFUSED_CREDENTIALS"
+              ? "destructive"
+              : "secondary"
+          }
+        >
           {LABELS[status]}
         </Badge>
       )}

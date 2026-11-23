@@ -15,7 +15,7 @@ registerEnumType(SetupState, {
 registerEnumType(ConnectionStatus, {
   name: 'ConnectionStatus',
   description:
-    "The state of a connection's upstream client. OFF: no client is wanted (disabled, not READY, or an auth type without a client yet). FAILED: the last connect failed, until the next change to the connection.",
+    "The state of a connection's upstream client. OFF: no client is wanted (disabled, not READY, or an auth type without a client yet). FAILED: the last connect failed. REFUSED_CREDENTIALS: the server refused the credentials (401 or 403). FAILED and REFUSED_CREDENTIALS last until the next change to the connection.",
 });
 
 registerEnumType(AuthType, {

@@ -2,13 +2,15 @@ import { defineTopic } from '../../../events/event-bus.js';
 
 // The state of a connection's upstream client in this server process.
 // OFF: the connection should have no client (disabled, not READY, or an
-// auth type without a client yet). FAILED: the last connect failed; it
-// stays FAILED until the next change to the connection or a restart.
+// auth type without a client yet). FAILED: the last connect failed;
+// REFUSED_CREDENTIALS: the server refused the credentials (401 or 403).
+// Both stay until the next change to the connection or a restart.
 export const ConnectionStatus = {
   OFF: 'OFF',
   CONNECTING: 'CONNECTING',
   CONNECTED: 'CONNECTED',
   FAILED: 'FAILED',
+  REFUSED_CREDENTIALS: 'REFUSED_CREDENTIALS',
 } as const;
 export type ConnectionStatus =
   (typeof ConnectionStatus)[keyof typeof ConnectionStatus];
