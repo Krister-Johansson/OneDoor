@@ -4,6 +4,8 @@ export const DEFAULT_USER_NAME = 'me';
 
 export interface Caller {
   userId: string;
+  // The user's name, shown in web (the viewer query).
+  userName: string;
 }
 
 // The request object, with the caller that CallerGuard attaches.

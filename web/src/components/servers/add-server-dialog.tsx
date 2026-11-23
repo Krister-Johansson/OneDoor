@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form"
 import { ChevronDownIcon } from "lucide-react"
 import { useRef, useState } from "react"
+import { Badge } from "#/components/ui/badge"
 import { Button } from "#/components/ui/button"
 import {
   Collapsible,
@@ -208,17 +209,18 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
       <Collapsible>
         <CollapsibleTrigger
           render={<Button type="button" variant="ghost" size="sm" />}
-          className="group/advanced -ml-2"
+          className="group/advanced -mx-2 w-[calc(100%+1rem)] justify-between"
         >
           Advanced settings
           <ChevronDownIcon className="transition-transform group-data-[panel-open]/advanced:rotate-180" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="flex flex-col gap-4 pt-2">
+        <CollapsibleContent className="grid gap-4 pt-2 sm:grid-cols-2">
           <form.Field name="headerName">
             {(field) => (
               <Field>
                 <FieldLabel htmlFor={field.name}>Header name</FieldLabel>
                 <Input
+                  className="font-mono"
                   id={field.name}
                   name={field.name}
                   autoComplete="off"
@@ -324,7 +326,10 @@ export function AddServerDialog({ open, onOpenChange }: AddServerDialogProps) {
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add server</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Add server
+            <Badge variant="secondary">Remote MCP only</Badge>
+          </DialogTitle>
           <DialogDescription>
             An MCP server of your own, reached over HTTP.
           </DialogDescription>

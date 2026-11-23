@@ -126,6 +126,12 @@ describe('connections query (e2e)', () => {
     ]);
   });
 
+  it('names the user the request acts for (viewer)', async () => {
+    const res = await graphql('{ viewer { id name } }');
+    const me = await prisma.user.findUniqueOrThrow({ where: { name: 'me' } });
+    expect(res.body).toEqual({ data: { viewer: { id: me.id, name: 'me' } } });
+  });
+
   it("returns one of the caller's connections by id", async () => {
     const res = await graphql(
       'query ($id: ID!) { connection(id: $id) { id displayName } }',

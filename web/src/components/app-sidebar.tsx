@@ -1,8 +1,10 @@
 import { Link, useMatchRoute } from "@tanstack/react-router"
 import { DoorOpen, Server } from "lucide-react"
+import { Suspense } from "react"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -11,6 +13,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "#/components/ui/sidebar"
+import { ViewerFooter } from "./viewer-footer"
 
 // The screens the sidebar links to, in order.
 const SCREENS = [{ to: "/servers", label: "Servers", icon: Server }] as const
@@ -62,6 +65,11 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <Suspense>
+          <ViewerFooter />
+        </Suspense>
+      </SidebarFooter>
     </Sidebar>
   )
 }
