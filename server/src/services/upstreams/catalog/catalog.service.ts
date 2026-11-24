@@ -6,7 +6,7 @@ import {
   NotFoundError,
   ValidationError,
 } from '../../../errors/domain-errors.js';
-import type { Prisma } from '../../../generated/prisma/client.js';
+import { Prisma } from '../../../generated/prisma/client.js';
 import { AuthType } from '../../../generated/prisma/enums.js';
 import { PrismaService } from '../../../prisma/prisma.service.js';
 import { toDomainError } from '../../../prisma/prisma-error.mapper.js';
@@ -20,7 +20,16 @@ import { UpstreamRegistryService } from '../registry/upstream-registry.service.j
 import type {
   CatalogEntry,
   SetCatalogOAuthClientData,
+  UrlParameter,
 } from './catalog-entry.interface.js';
+import {
+  isUrlParameterValue,
+  templateParameters,
+  type UrlParameters,
+  urlParametersSchema,
+} from './url-template.js';
+
+const { DbNull } = Prisma;
 
 @Injectable()
 export class CatalogService {
@@ -117,10 +126,15 @@ export class CatalogService {
   // REQ-CONN-012: creates the owner's connection for the entry, or enables
   // the existing one. Moving to another auth option deletes the stored
   // credentials, as a changed auth type does (REQ-CONN-023).
+  //
+  // T22: an option whose URL holds placeholders needs a value for each.
+  // Values left out keep the connection's stored ones. Other values, like
+  // another option, delete the stored credentials.
   async switchOn(
     ownerId: string,
     catalogEntryId: string,
     authType: AuthType,
+    urlParameters?: UrlParameter[],
   ): Promise<Connection> {
     if (!z.uuid().safeParse(catalogEntryId).success) {
       throw new NotFoundError('Catalog entry not found');
@@ -165,32 +179,49 @@ export class CatalogService {
 
       const existing = await this.prisma.connection.findFirst({
         where: { ownerId, catalogEntryId },
-        select: { id: true, catalogAuthOptionId: true },
+        select: { id: true, catalogAuthOptionId: true, urlParameters: true },
       });
+      const parameters = resolveUrlParameters(
+        entry.displayName,
+        option.url,
+        urlParameters,
+        urlParametersSchema.safeParse(existing?.urlParameters ?? {}).data ?? {},
+      );
+      const parametersColumn = parameters ?? DbNull;
       if (!existing) {
         const created = await this.prisma.connection.create({
-          data: { ownerId, catalogEntryId, catalogAuthOptionId: option.id },
+          data: {
+            ownerId,
+            catalogEntryId,
+            catalogAuthOptionId: option.id,
+            urlParameters: parametersColumn,
+          },
           include: CONNECTION_INCLUDE,
         });
         this.registry.syncInBackground(created.id);
         return toConnection(created);
       }
 
-      const sameOption = existing.catalogAuthOptionId === option.id;
+      // Credentials are never sent to a URL they were not entered for.
+      const sameTarget =
+        existing.catalogAuthOptionId === option.id &&
+        sameParameters(parameters, existing.urlParameters);
       const updated = await this.prisma.$transaction(async (tx) => {
-        // Another auth option starts from no credentials, OAuth included.
-        if (!sameOption) {
+        // Another auth option or URL starts from no credentials, OAuth
+        // included.
+        if (!sameTarget) {
           await tx.connectionOAuth.deleteMany({
             where: { connectionId: existing.id },
           });
         }
         return tx.connection.update({
           where: { id: existing.id, ownerId },
-          data: sameOption
+          data: sameTarget
             ? { enabled: true }
             : {
                 enabled: true,
                 catalogAuthOptionId: option.id,
+                urlParameters: parametersColumn,
                 apiKeyCiphertext: null,
                 apiKeyKeyId: null,
               },
@@ -232,9 +263,58 @@ function toCatalogEntry(entry: EntryRow): CatalogEntry {
       headerPrefix: option.headerPrefix,
       oauthClientId: option.oauthClientId,
       hasClientSecret: option.oauthClientSecretCiphertext !== null,
+      urlParameters: templateParameters(option.url),
     })),
     connection: entry.connections[0]
       ? toConnection(entry.connections[0])
       : null,
   };
+}
+
+// The values for the placeholders of an option's URL (T22): the given ones,
+// or else the stored ones. Null for a URL without placeholders.
+function resolveUrlParameters(
+  serverName: string,
+  url: string,
+  given: UrlParameter[] | undefined,
+  stored: UrlParameters,
+): UrlParameters | null {
+  const names = templateParameters(url);
+  if (given !== undefined) {
+    const seen = new Set<string>();
+    for (const { name, value } of given) {
+      if (!names.includes(name) || seen.has(name)) {
+        throw new ValidationError(`${serverName} does not take ${name}`);
+      }
+      if (!isUrlParameterValue(value)) {
+        throw new ValidationError(
+          `${name} may hold only letters, digits, dots, underscores and hyphens`,
+        );
+      }
+      seen.add(name);
+    }
+  }
+  if (names.length === 0) return null;
+  const source = given
+    ? Object.fromEntries(given.map(({ name, value }) => [name, value]))
+    : stored;
+  const values: UrlParameters = {};
+  for (const name of names) {
+    const value = source[name];
+    if (value === undefined || !isUrlParameterValue(value)) {
+      throw new ValidationError(`${serverName} needs ${name}`);
+    }
+    values[name] = value;
+  }
+  return values;
+}
+
+function sameParameters(next: UrlParameters | null, stored: unknown): boolean {
+  const previous = urlParametersSchema.safeParse(stored).data ?? null;
+  if (next === null || previous === null) return next === previous;
+  const keys = Object.keys(next);
+  return (
+    keys.length === Object.keys(previous).length &&
+    keys.every((key) => next[key] === previous[key])
+  );
 }

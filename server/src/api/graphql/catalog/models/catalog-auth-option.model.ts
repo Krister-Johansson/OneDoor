@@ -34,4 +34,10 @@ export class CatalogAuthOptionModel implements CatalogAuthOption {
       "Whether the OAuth app's client secret is stored. The secret is never returned.",
   })
   hasClientSecret: boolean;
+
+  @Field(() => [String], {
+    description:
+      'The placeholders in the URL, such as organization. Switching on the option takes a value for each (T22).',
+  })
+  urlParameters: string[];
 }

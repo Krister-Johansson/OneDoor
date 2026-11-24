@@ -101,6 +101,19 @@ describe('catalog (e2e)', () => {
     );
     expect(body.data?.catalog).toEqual([
       {
+        key: 'azure-devops',
+        displayName: 'Azure DevOps',
+        authOptions: [
+          {
+            authType: 'OAUTH_MANUAL',
+            url: 'https://mcp.dev.azure.com/{organization}',
+            headerName: null,
+            headerPrefix: null,
+          },
+        ],
+        connection: null,
+      },
+      {
         key: 'context7',
         displayName: 'Context7',
         authOptions: [

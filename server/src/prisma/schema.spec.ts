@@ -172,16 +172,17 @@ describe('database schema', () => {
     expect(toDomainError(error, 'Catalog entry')).toBeInstanceOf(ConflictError);
   });
 
-  it('seeds the GitHub and Context7 catalog entries once (REQ-CONN-010)', async () => {
+  it('seeds the GitHub, Context7 and Azure DevOps catalog entries once (REQ-CONN-010, T22)', async () => {
     await seed(prisma);
     const entries = await prisma.catalogEntry.findMany({
-      where: { key: { in: ['github', 'context7'] } },
+      where: { key: { in: ['github', 'context7', 'azure-devops'] } },
       include: { authOptions: { orderBy: { authType: 'asc' } } },
       orderBy: { key: 'asc' },
     });
     expect(
       entries.map((e) => [e.key, e.authOptions.map((o) => o.authType)]),
     ).toEqual([
+      ['azure-devops', ['OAUTH_MANUAL']],
       ['context7', ['API_KEY', 'OAUTH_DCR']],
       ['github', ['API_KEY', 'OAUTH_MANUAL']],
     ]);
@@ -270,5 +271,19 @@ describe('database schema', () => {
         },
       }),
     ).rejects.toThrow(/catalog_auth_option_oauth_client_auth_check/);
+  });
+
+  it('keeps URL parameters off custom connections (T22)', async () => {
+    await expect(
+      prisma.connection.create({
+        data: {
+          ownerId: meId,
+          displayName: 'With parameters',
+          url: 'https://mcp.example.test/mcp',
+          authType: 'NONE',
+          urlParameters: { organization: 'contoso' },
+        },
+      }),
+    ).rejects.toThrow(/connection_url_parameters_check/);
   });
 });
