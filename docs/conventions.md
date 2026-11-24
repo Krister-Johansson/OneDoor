@@ -752,6 +752,37 @@ Approved 2026-11-23. OAuth types (`OAUTH_DCR`, T21) drive the MCP SDK through `C
 - A change of URL, auth type or catalog auth option deletes the `connection_oauth` row in the same transaction.
 - Tests use `startOAuthFlowTwin()` and follow the authorize redirect with `fetch(url, { redirect: 'manual' })`, then deliver the callback with supertest. Assert where the callback redirects, not only the stored state.
 
+### OAuth with client details
+
+Approved 2026-11-24. `OAUTH_MANUAL` (T22) uses an OAuth app that someone registered with the authorization server. OneDoor never registers a client for it.
+
+- `OAuthAuthProvider(authType)` serves both OAuth types. `ConnectionOAuthProvider` takes the app as `client` and then has no `saveClientInformation`, so the SDK cannot register.
+- `ConnectionOAuthService.manualClient(id)` returns the app. A catalog connection uses its auth option's app, a custom connection its own:
+
+```ts
+const option = row.catalogAuthOption;
+const source = option ?? row;
+const context = option
+  ? `catalog_auth_option:${option.id}:oauth_client_secret`
+  : `connection:${connectionId}:oauth_client_secret`;
+```
+
+- The mapper and the registry target pick the app the same way (`row.catalogAuthOption ?? row`). The OAuth fingerprint adds the client id and the secret's key id and ciphertext, so a new app opens a new client.
+- A catalog app lives on `catalog_auth_option` (`oauth_client_id` and the encrypted secret), allowed only on `OAUTH_MANUAL` options by a check constraint. The seed never writes it. `setCatalogOAuthClient` sets it: a left-out secret is kept, `null` deletes it, a string replaces it. It then syncs every connection on the option in the background.
+- `switchOnCatalogEntry` answers `VALIDATION` for an `OAUTH_MANUAL` option without an app.
+- `Query.oauthRedirectUrl` is the redirect URI to register in the app. Web shows it next to every OAuth app form.
+- Tests pass `client` to `startOAuthFlowTwin()`. The twin then offers no registration and checks the secret at `/token`. Assert `twin.registrations` stays 0.
+
+### Catalog URL templates
+
+Approved 2026-11-24. A catalog auth option's URL may hold placeholders, as in `https://mcp.dev.azure.com/{organization}`. The helpers are in `server/src/services/upstreams/catalog/url-template.ts`.
+
+- A placeholder name matches `[a-z][a-zA-Z0-9]*`. `CatalogAuthOption.urlParameters` lists the names, in order.
+- A value is one URL path segment (letters, digits, `.`, `_`, `-`, starting and ending with a letter or digit, at most 100 characters) and is URL-encoded when filled in, so it cannot change the host.
+- The connection stores the values in `url_parameters` (JSONB, catalog connections only). `toConnection` fills the template with `fillTemplate`; `null` means the row is broken and throws `InternalError`.
+- `switchOnCatalogEntry(..., urlParameters)` takes the given values, or else the stored ones, and answers `VALIDATION` for an unknown, duplicate, invalid or missing value. A different option or different values delete the OAuth state and the API key, as a URL change does.
+- Code that needs a host without a connection (icons) uses `templateOrigin`.
+
 ## Queues
 
 Approved 2026-11-22.
@@ -1035,6 +1066,7 @@ export function useSetConnectionEnabled() {
 
 - The mutation selects the changed object's `id` and the fields screens show, so Apollo updates the cached object by id.
 - A mutation that creates an object, or changes which object a field points to, refetches the queries that show it, with `refetchQueries: [XDocument]` and `awaitRefetchQueries: true`. `useSwitchOnCatalogEntry` refetches `Catalog` and `Connections`.
+- A mutation whose result shows on several screens, where the hook is used from more than one of them, refetches with `refetchQueries: "active"` and `awaitRefetchQueries: true`. Naming a document that is not active makes Apollo warn. `useSetCatalogOAuthClient` is the example.
 - The function rejects on an error. The component catches it.
 
 ### Errors in the UI
@@ -1044,6 +1076,9 @@ export function useSetConnectionEnabled() {
 ### Dialogs
 
 A dialog is a component in `src/components/<screen>/` built on shadcn `Dialog`, controlled by its parent through `open` and `onOpenChange`. It reports the user's choice through a callback, such as `onChoose(authType)`, and the parent runs the mutation.
+
+- A dialog that saves one object on its own, opened from more than one screen, runs its mutation itself. `OAuthAppDialog` (`src/components/servers/oauth-app-dialog.tsx`) is the example: the catalog card and a server's `OAuthAppSection` both open it.
+- `UrlParametersDialog` asks for a catalog option's URL values before the catalog card switches the entry on. The label comes from the placeholder name (`organization` is "Organization"), and the field checks the path segment rule.
 
 ### Forms
 
