@@ -395,3 +395,44 @@ test("sets the OAuth app of a catalog server and signs in with it (T22)", async 
   )
   await expect(page.getByRole("button", { name: "Authorize" })).toBeVisible()
 })
+
+test("sets up Azure DevOps from the catalog and adds it with an organization (T22)", async ({
+  page,
+}) => {
+  await page.goto("/servers")
+  const ado = card(page, "Azure DevOps")
+  await expect(ado).toContainText("Needs an OAuth app before you can add it.")
+  await expect(
+    page.getByRole("button", { name: "Add Azure DevOps" }),
+  ).toHaveCount(0)
+
+  // A public Entra client: a client id and no secret.
+  await page.getByRole("button", { name: "Set up Azure DevOps" }).click()
+  const app = page.getByRole("dialog", { name: "OAuth app for Azure DevOps" })
+  await expect(app.getByText(/\/oauth\/callback$/)).toBeVisible()
+  await app.getByLabel("Client id").fill("e2e-entra-app")
+  await app.getByRole("button", { name: "Save" }).click()
+  await expect(app).toBeHidden()
+
+  await page.getByRole("button", { name: "Add Azure DevOps" }).click()
+  const ask = page.getByRole("dialog", { name: "Connect to Azure DevOps" })
+  await expect(ask).toContainText("https://mcp.dev.azure.com/{organization}")
+  await ask.getByLabel("Organization").fill("contoso/other")
+  await ask.getByRole("button", { name: "Add" }).click()
+  await expect(ask.getByText(/^Use letters, digits/)).toBeVisible()
+  await ask.getByLabel("Organization").fill("contoso")
+  await ask.getByRole("button", { name: "Add" }).click()
+
+  // The authorization would go to Microsoft, so the flow stops at the button.
+  await expect(page).toHaveURL(/\/servers\/[0-9a-f-]{36}$/)
+  await expect(
+    page.getByText("https://mcp.dev.azure.com/contoso"),
+  ).toBeVisible()
+  await expect(page.getByRole("region", { name: "Connection" })).toContainText(
+    "OAuth with client details · Needs credentials",
+  )
+  await expect(page.getByRole("region", { name: "OAuth app" })).toContainText(
+    "Client ide2e-entra-app",
+  )
+  await expect(page.getByRole("button", { name: "Authorize" })).toBeVisible()
+})

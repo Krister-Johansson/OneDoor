@@ -4,6 +4,7 @@ import {
   CatalogDocument,
   ConnectionsDocument,
   SwitchOnCatalogEntryDocument,
+  type UrlParameterInput,
 } from "#/gql/graphql"
 
 // Switches on a catalog entry with one of its auth options. The entry may
@@ -14,7 +15,12 @@ export function useSwitchOnCatalogEntry() {
     refetchQueries: [CatalogDocument, ConnectionsDocument],
     awaitRefetchQueries: true,
   })
-  const switchOn = (catalogEntryId: string, authType: AuthType) =>
-    mutate({ variables: { catalogEntryId, authType } })
+  // `urlParameters` fills the placeholders of the option's URL (T22). Left
+  // out, the connection keeps its stored values.
+  const switchOn = (
+    catalogEntryId: string,
+    authType: AuthType,
+    urlParameters?: UrlParameterInput[],
+  ) => mutate({ variables: { catalogEntryId, authType, urlParameters } })
   return { switchOn, loading }
 }
