@@ -40,7 +40,7 @@ Needs spec: `specs/upstreams.md`. Needs fake upstream MCP servers in `server/tes
 - [x] T19 Tool policy. An enabled flag per tool, set by the owner, with new tools enabled. MCP annotations are shown as labels and never enforced. Adds the tools screen per connection. Server in PR #57, the web tools screen in PR #60.
 - [x] T20 Upstream auth with an API key. `UpstreamAuthProvider` abstract class with the `NONE` and `API_KEY` implementations, and the `REFUSED_CREDENTIALS` status. Human review: credential handling. PR #62.
 - [x] T21 Upstream auth with OAuth and dynamic client registration (`OAUTH_DCR`). Human review: OAuth flow, callback, token refresh, discovery URL fetching. Server in PR #64, web Authorize action and the `/oauth` forward in PR #66.
-- [ ] T22 Upstream auth with OAuth and client details (`OAUTH_MANUAL`). Adds OAuth client details for catalog auth options from server config, an `OAUTH_MANUAL` option for GitHub (a GitHub OAuth app), and Azure DevOps (organization per connection, a public Entra client; see the spec's open questions). Human review: OAuth flow.
+- [x] T22 Upstream auth with OAuth and client details (`OAUTH_MANUAL`). Adds OAuth client details for catalog auth options from server config, an `OAUTH_MANUAL` option for GitHub (a GitHub OAuth app), and Azure DevOps (organization per connection, a public Entra client; see the spec's open questions). Human review: OAuth flow. Custom servers in PRs #70 and #71, the catalog OAuth app and GitHub in PRs #72 and #73, Azure DevOps in PRs #74 and #75.
 
 ## Search
 
