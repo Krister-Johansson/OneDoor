@@ -68,6 +68,13 @@ export type ProbeStatus =
   | "REFUSED"
   | "UNREACHABLE"
 
+/** The OAuth app of a catalog entry's OAUTH_MANUAL option. Every connection on the option uses it (T22). */
+export type SetCatalogOAuthClientInput = {
+  clientId: string
+  /** Left out keeps the stored secret, null deletes it, a string replaces it. A public client has none. */
+  clientSecret?: string | null | undefined
+}
+
 /** Whether the credentials of a connection are complete (REQ-CONN-044). */
 export type SetupState = "NEEDS_CREDENTIALS" | "READY"
 
@@ -97,7 +104,12 @@ export type CatalogQuery = {
     displayName: string
     description: string
     iconUrl: string
-    authOptions: Array<{ __typename: "CatalogAuthOption"; authType: AuthType }>
+    authOptions: Array<{
+      __typename: "CatalogAuthOption"
+      authType: AuthType
+      oauthClientId: string | null
+      hasClientSecret: boolean
+    }>
     connection: {
       __typename: "Connection"
       id: string
@@ -121,11 +133,31 @@ export type SwitchOnCatalogEntryMutation = {
     __typename: "Connection"
     id: string
     authType: AuthType
+    oauthClientId: string | null
+    hasClientSecret: boolean
     oauthAuthorized: boolean
     setupState: SetupState
     enabled: boolean
     status: ConnectionStatus
     toolCount: number
+  }
+}
+
+export type SetCatalogOAuthClientMutationVariables = Exact<{
+  catalogEntryId: string | number
+  input: SetCatalogOAuthClientInput
+}>
+
+export type SetCatalogOAuthClientMutation = {
+  setCatalogOAuthClient: {
+    __typename: "CatalogEntry"
+    id: string
+    authOptions: Array<{
+      __typename: "CatalogAuthOption"
+      authType: AuthType
+      oauthClientId: string | null
+      hasClientSecret: boolean
+    }>
   }
 }
 
@@ -370,6 +402,14 @@ export const CatalogDocument = {
                         kind: "Field",
                         name: { kind: "Name", value: "authType" },
                       },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "oauthClientId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "hasClientSecret" },
+                      },
                     ],
                   },
                 },
@@ -480,6 +520,14 @@ export const SwitchOnCatalogEntryDocument = {
                 { kind: "Field", name: { kind: "Name", value: "authType" } },
                 {
                   kind: "Field",
+                  name: { kind: "Name", value: "oauthClientId" },
+                },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "hasClientSecret" },
+                },
+                {
+                  kind: "Field",
                   name: { kind: "Name", value: "oauthAuthorized" },
                 },
                 { kind: "Field", name: { kind: "Name", value: "setupState" } },
@@ -496,6 +544,100 @@ export const SwitchOnCatalogEntryDocument = {
 } as unknown as DocumentNode<
   SwitchOnCatalogEntryMutation,
   SwitchOnCatalogEntryMutationVariables
+>
+export const SetCatalogOAuthClientDocument = {
+  kind: "Document",
+  definitions: [
+    {
+      kind: "OperationDefinition",
+      operation: "mutation",
+      name: { kind: "Name", value: "SetCatalogOAuthClient" },
+      variableDefinitions: [
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "catalogEntryId" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: { kind: "NamedType", name: { kind: "Name", value: "ID" } },
+          },
+        },
+        {
+          kind: "VariableDefinition",
+          variable: {
+            kind: "Variable",
+            name: { kind: "Name", value: "input" },
+          },
+          type: {
+            kind: "NonNullType",
+            type: {
+              kind: "NamedType",
+              name: { kind: "Name", value: "SetCatalogOAuthClientInput" },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: "SelectionSet",
+        selections: [
+          {
+            kind: "Field",
+            name: { kind: "Name", value: "setCatalogOAuthClient" },
+            arguments: [
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "catalogEntryId" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "catalogEntryId" },
+                },
+              },
+              {
+                kind: "Argument",
+                name: { kind: "Name", value: "input" },
+                value: {
+                  kind: "Variable",
+                  name: { kind: "Name", value: "input" },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: "SelectionSet",
+              selections: [
+                { kind: "Field", name: { kind: "Name", value: "id" } },
+                {
+                  kind: "Field",
+                  name: { kind: "Name", value: "authOptions" },
+                  selectionSet: {
+                    kind: "SelectionSet",
+                    selections: [
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "authType" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "oauthClientId" },
+                      },
+                      {
+                        kind: "Field",
+                        name: { kind: "Name", value: "hasClientSecret" },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode<
+  SetCatalogOAuthClientMutation,
+  SetCatalogOAuthClientMutationVariables
 >
 export const ConnectionsDocument = {
   kind: "Document",

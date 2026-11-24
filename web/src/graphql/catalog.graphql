@@ -8,6 +8,8 @@ query Catalog {
     iconUrl
     authOptions {
       authType
+      oauthClientId
+      hasClientSecret
     }
     connection {
       id
@@ -26,10 +28,29 @@ mutation SwitchOnCatalogEntry($catalogEntryId: ID!, $authType: AuthType!) {
   switchOnCatalogEntry(catalogEntryId: $catalogEntryId, authType: $authType) {
     id
     authType
+    oauthClientId
+    hasClientSecret
     oauthAuthorized
     setupState
     enabled
     status
     toolCount
+  }
+}
+
+# Sets the OAuth app of a catalog entry's OAUTH_MANUAL option (T22). Every
+# connection on the option uses it. The result carries the entry's id, so
+# Apollo updates its auth options in the cache.
+mutation SetCatalogOAuthClient(
+  $catalogEntryId: ID!
+  $input: SetCatalogOAuthClientInput!
+) {
+  setCatalogOAuthClient(catalogEntryId: $catalogEntryId, input: $input) {
+    id
+    authOptions {
+      authType
+      oauthClientId
+      hasClientSecret
+    }
   }
 }

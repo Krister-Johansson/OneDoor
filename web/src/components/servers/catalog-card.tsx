@@ -51,9 +51,14 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
     }
   }
 
+  // OAuth with client details is offered once its OAuth app is set (T22).
+  const authTypes = entry.authOptions
+    .filter((o) => o.authType !== "OAUTH_MANUAL" || o.oauthClientId !== null)
+    .map((o) => o.authType)
+
   function onAdd() {
-    const [only] = entry.authOptions
-    if (entry.authOptions.length === 1 && only) void add(only.authType)
+    const [only] = authTypes
+    if (authTypes.length === 1 && only) void add(only)
     else setChoosing(true)
   }
 
@@ -84,7 +89,7 @@ export function CatalogCard({ entry }: { entry: CatalogEntry }) {
         open={choosing}
         onOpenChange={setChoosing}
         serverName={entry.displayName}
-        authTypes={entry.authOptions.map((option) => option.authType)}
+        authTypes={authTypes}
         onChoose={(authType) => void add(authType)}
       />
     </ServerCard>

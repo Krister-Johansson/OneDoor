@@ -6,10 +6,12 @@ import {
 } from "@tanstack/react-router"
 import { OAuthResultMessage } from "#/components/servers/oauth-result-message"
 import { ConnectionPanel } from "#/components/tools/connection-panel"
+import { OAuthAppSection } from "#/components/tools/oauth-app-section"
 import { ServerHeader } from "#/components/tools/server-header"
 import { ToolsSection } from "#/components/tools/tools-section"
 import { buttonVariants } from "#/components/ui/button"
 import {
+  CatalogDocument,
   ConnectionsDocument,
   ConnectionToolsDocument,
   OAuthRedirectUrlDocument,
@@ -29,6 +31,8 @@ export const Route = createFileRoute("/servers_/$connectionId")({
     preloadQuery(ConnectionsDocument)
     // The OAuth app fields of the server dialogs show it.
     preloadQuery(OAuthRedirectUrlDocument)
+    // A catalog server's OAuth app is on its catalog entry (T22).
+    preloadQuery(CatalogDocument)
   },
   head: () => ({ meta: [{ title: "Server · OneDoor" }] }),
   component: ServerPage,
@@ -52,6 +56,7 @@ function ServerPage() {
       )}
       <ServerHeader connectionId={connectionId} />
       <ConnectionPanel connectionId={connectionId} />
+      <OAuthAppSection connectionId={connectionId} />
       <ToolsSection connectionId={connectionId} />
     </div>
   )
