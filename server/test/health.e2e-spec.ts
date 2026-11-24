@@ -12,6 +12,7 @@ import {
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { stubAppEnv } from './support/env.js';
+import { startTcpProxy, type TcpProxy } from './support/tcp-proxy.js';
 
 // The same images as docker-compose.yml.
 const POSTGRES_IMAGE = 'pgvector/pgvector:0.8.7-pg19-trixie';
@@ -21,6 +22,7 @@ describe('Health routes (e2e)', () => {
   const password = randomBytes(12).toString('hex');
   let postgres: StartedPostgreSqlContainer;
   let redis: StartedRedisContainer;
+  let redisProxy: TcpProxy;
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -28,9 +30,15 @@ describe('Health routes (e2e)', () => {
       new PostgreSqlContainer(POSTGRES_IMAGE).withPassword(password).start(),
       new RedisContainer(REDIS_IMAGE).start(),
     ]);
+    // The app reaches Redis through a proxy, so taking Redis away cannot
+    // leave the app talking to another test file's Redis (see startTcpProxy).
+    redisProxy = await startTcpProxy({
+      host: redis.getHost(),
+      port: redis.getPort(),
+    });
     stubAppEnv({
       DATABASE_URL: postgres.getConnectionUri(),
-      REDIS_URL: redis.getConnectionUrl(),
+      REDIS_URL: `redis://${redisProxy.host}:${redisProxy.port}`,
     });
 
     // Imported after the stubs, so config validation sees the containers.
@@ -44,6 +52,7 @@ describe('Health routes (e2e)', () => {
 
   afterAll(async () => {
     await app?.close();
+    redisProxy?.cut();
     await Promise.all([postgres?.stop(), redis?.stop()]);
     vi.unstubAllEnvs();
   });
@@ -66,6 +75,7 @@ describe('Health routes (e2e)', () => {
   });
 
   it('GET /health/ready answers 503 when Redis is down', async () => {
+    redisProxy.cut();
     await redis.stop();
     const res = await request(app.getHttpServer())
       .get('/health/ready')

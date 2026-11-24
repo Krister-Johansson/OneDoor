@@ -103,17 +103,22 @@ export class IconsService {
     }
   }
 
-  // Icons with the same bytes share one row.
+  // Icons with the same bytes share one row. Two refreshes can store the
+  // same bytes at once, and Prisma's upsert reads and then inserts, so the
+  // later insert would fail on the unique sha256. skipDuplicates makes the
+  // insert ON CONFLICT DO NOTHING; the read then finds whichever row won.
   private async store(
     contentType: string,
     bytes: Uint8Array<ArrayBuffer>,
   ): Promise<string> {
     const sha256 = createHash('sha256').update(bytes).digest('hex');
     try {
-      const icon = await this.prisma.icon.upsert({
+      await this.prisma.icon.createMany({
+        data: { sha256, contentType, bytes },
+        skipDuplicates: true,
+      });
+      const icon = await this.prisma.icon.findUniqueOrThrow({
         where: { sha256 },
-        create: { sha256, contentType, bytes },
-        update: {},
         select: { id: true },
       });
       return icon.id;
